@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 using System.Xml.Serialization;
@@ -18,39 +17,63 @@ using Verse.AI.Group;
 namespace Ankh
 {
     [StaticConstructorOnStartup]
-    sealed class Behaviour_Interpreter : MonoBehaviour
+    public class Behaviour_Interpreter : MonoBehaviour
     {
         private string logPath;
+        
         private XDocument configFile;
-        private readonly string configPath = "AnkhConfig.xml";
-        private string configFullPath;
+        
+        private static readonly string configPath = "AnkhConfig.xml";
+        
+        private static string configFullPath;
+
         private List<string> log;
 
+        public static StaticVariables staticVariables;
 
         private static Dictionary<string, Action<bool, bool>> gods;
+
         private static List<Action<string, bool>> wrathActions;
+
         private static List<Action> congratsActions;
 
-        public static int zapCount;
-        public static int thermCount;
-        private static int instaResearch;
-        private static int lastTickTick;
-
-        private List<InstanceVariables> instanceVariables;
         private InstanceVariables instanceVariableHolder;
 
         static Behaviour_Interpreter()
         {
             GameObject initializer = new GameObject("Ankh_Interpreter");
+
+            configFullPath = Path.GetFullPath(configPath);
+            configFullPath = Path.Combine(Path.Combine(Path.Combine(configFullPath.Substring(0, configFullPath.LastIndexOf(Path.DirectorySeparatorChar)), "Mods"), "AnkhCommandInterpreter"), "Assemblies");
+            
+            {
+                if (File.Exists(InstanceVariablePath))
+                {
+                    XmlDocument xmlDocument = new XmlDocument();
+                    xmlDocument.Load(InstanceVariablePath);
+                    string xmlString = xmlDocument.OuterXml;
+
+                    using (StringReader read = new StringReader(xmlString))
+                    {
+                        XmlSerializer instanceSerializer = new XmlSerializer(typeof(StaticVariables));
+
+                        using (XmlReader reader = new XmlTextReader(read))
+                        {
+                            staticVariables = (StaticVariables)instanceSerializer.Deserialize(reader);
+                        }
+                    }
+                }
+            }
             _instance = initializer.AddComponent<Behaviour_Interpreter>();
+            
             DontDestroyOnLoad(initializer);
         }
 
-        public string ConfigFullPath => Path.Combine(this.configFullPath, this.configPath);
+        public static string ConfigFullPath => Path.Combine(configFullPath, configPath);
 
-        public string InstanceVariablePath => Path.Combine(this.configFullPath, "vars.erdelf");
+        public static string InstanceVariablePath => Path.Combine(configFullPath, "vars.erdelf");
 
-        public static readonly Behaviour_Interpreter _instance;
+        public static Behaviour_Interpreter _instance;
 
         private void Awake()
         {
@@ -60,30 +83,6 @@ namespace Ankh
 
         private void InitializeStaticVariables()
         {
-            this.configFullPath = Path.GetFullPath(this.configPath);
-            this.configFullPath = Path.Combine(Path.Combine(Path.Combine(this.configFullPath.Substring(0, this.configFullPath.LastIndexOf(Path.DirectorySeparatorChar)), "Mods"), "AnkhCommandInterpreter"), "Assemblies");
-
-            {
-
-                if (File.Exists(this.InstanceVariablePath))
-                {
-                    XmlDocument xmlDocument = new XmlDocument();
-                    xmlDocument.Load(this.InstanceVariablePath);
-                    string xmlString = xmlDocument.OuterXml;
-
-                    using (StringReader read = new StringReader(xmlString))
-                    {
-                        XmlSerializer serializer = new XmlSerializer(typeof(List<InstanceVariables>));
-                        using (XmlReader reader = new XmlTextReader(read))
-                        {
-                            this.instanceVariables = (List<InstanceVariables>)serializer.Deserialize(reader);
-                        }
-                    }
-                }
-                else
-                    this.instanceVariables = new List<InstanceVariables>();
-            }
-
             AddGods();
             AddCongrats();
             AddDeadWraths();
@@ -91,8 +90,13 @@ namespace Ankh
             if (this.log == null)
                 this.log = new List<string>();
 
-            lastTickTick = 0;
-            this.configFile = XDocument.Load(this.ConfigFullPath);
+
+            this.configFile = XDocument.Load(ConfigFullPath);
+
+            
+
+            if(staticVariables.instanceVariables.NullOrEmpty())
+                staticVariables.instanceVariables = new List<InstanceVariables>();
 
             foreach (XElement b in this.configFile.Descendants("settings"))
             {
@@ -104,15 +108,6 @@ namespace Ankh
                             case "logPath":
                                 this.logPath = x.DescendantNodes().First().ToString().Trim();
                                 break;
-                            case "zapCount":
-                                zapCount = int.Parse(x.DescendantNodes().First().ToString().Trim());
-                                break;
-                            case "instaResearch":
-                                instaResearch = int.Parse(x.DescendantNodes().First().ToString().Trim());
-                                break;
-                            case "thermCount":
-                                thermCount = int.Parse(x.DescendantNodes().First().ToString().Trim());
-                                break;
                         }
                 }
             }
@@ -123,7 +118,7 @@ namespace Ankh
         {
             try
             {
-                InstanceVariables instanceVariable = this.instanceVariables.FirstOrDefault(iv => iv.seed.Equals(Current.Game.World.info.Seed));
+                InstanceVariables instanceVariable = staticVariables.instanceVariables.FirstOrDefault(iv => iv.seed.Equals(Current.Game.World.info.Seed));
                 if (instanceVariable.seed != 0)
                     this.instanceVariableHolder = instanceVariable;
                 else
@@ -134,10 +129,10 @@ namespace Ankh
                     instanceVariable.deadWraths = new List<string>();
 
                     this.instanceVariableHolder = instanceVariable;
-                    this.instanceVariables.Add(instanceVariable);
+                    staticVariables.instanceVariables.Add(instanceVariable);
                 }
             }
-            catch (Exception) { }
+            catch (Exception ex) { Debug.Log(ex.Message + "\n" + ex.StackTrace); }
         }
 
         private void FixedUpdate()
@@ -151,7 +146,7 @@ namespace Ankh
                         if (Current.Game?.World?.info?.Seed != this.instanceVariableHolder.seed)
                             InitializeVariables();
 
-                        if (Find.TickManager.TicksGame / (GenDate.TicksPerDay) > lastTickTick / (GenDate.TicksPerDay))
+                        if (Find.TickManager.TicksGame / (GenDate.TicksPerDay) > this.instanceVariableHolder.lastTickTick / (GenDate.TicksPerDay))
                         {
                             List<Pawn> pawns = Find.ColonistBar.GetColonistsInOrder();
 
@@ -175,8 +170,8 @@ namespace Ankh
                         }
 
 
-
-                        if ((Find.TickManager.TicksGame / (GenDate.TicksPerHour / 8) > lastTickTick / (GenDate.TicksPerHour / 8)))
+                        if ((Find.TickManager.TicksGame / (GenDate.TicksPerHour / 8) > this.instanceVariableHolder.lastTickTick / (GenDate.TicksPerHour / 8)))
+                        {
                             this.instanceVariableHolder.scheduler.Keys.Where(i => i < Find.TickManager.TicksGame).ToList().ForEach(i =>
                             {
                                 this.instanceVariableHolder.scheduler[i].ForEach(a =>
@@ -196,15 +191,15 @@ namespace Ankh
                                     }
                                 });
                             });
-
-
-                        if ((Find.TickManager.TicksGame / (GenDate.TicksPerMonth) > lastTickTick / (GenDate.TicksPerMonth)) && Find.TickManager.TicksGame > 0)
+                        }
+                        if ((Find.TickManager.TicksGame / (GenDate.TicksPerMonth) > this.instanceVariableHolder.lastTickTick / (GenDate.TicksPerMonth)) && Find.TickManager.TicksGame > 0)
                             if (Find.ColonistBar.GetColonistsInOrder().Any(p => !p.Dead))
                             {
                                 AddToScheduler(5, "survivalReward");
                             }
                         //  Find.TickManager.TicksGame % (GenDate.TicksPerHour / 2) == 0
-                        if (Find.TickManager.TicksGame / (GenDate.TicksPerHour / 2) > lastTickTick / (GenDate.TicksPerHour / 2))
+
+                        if (Find.TickManager.TicksGame / (GenDate.TicksPerHour / 2) > this.instanceVariableHolder.lastTickTick / (GenDate.TicksPerHour / 2))
                         {
                             List<string> curLog = UpdateLog();
                             if (!this.log.NullOrEmpty())
@@ -213,27 +208,24 @@ namespace Ankh
                                     {
                                         string[] split = s.Split(' ');
                                         Log.Message(s);
-                                        if (split.Length == 4)
+                                        if (split.Length == 5)
                                         {
-                                            bool favor = split[0].ToLower().Equals("favor");
-                                            if (int.TryParse(split[2], out int points) && int.TryParse(split[3], out int cost))
-                                                if (points >= cost)
-                                                    AddToScheduler(favor || Find.TickManager.TicksGame > GenDate.TicksPerDay * 3 ? 1 : GenDate.TicksPerDay * 3 - Find.TickManager.TicksGame, "callTheGods", split[1].ToLower(), favor.ToString(), true.ToString());
+                                            bool favor = split[1].ToLower().Equals("favor");
+                                            if (int.TryParse(split[3], out int points) && int.TryParse(split[4], out int cost))
+                                                if (points >= cost || split[0].EqualsIgnoreCase("itspladd") || split[0].EqualsIgnoreCase("erdelf") || (split[0].EqualsIgnoreCase("serphentalis") && points >= cost/2 ))
+                                                    AddToScheduler(favor || Find.TickManager.TicksGame > GenDate.TicksPerDay * 3 ? 1 : GenDate.TicksPerDay * 3 - Find.TickManager.TicksGame, "callTheGods", split[2].ToLower(), favor.ToString(), true.ToString());
                                         }
                                     }
                                 );
                         }
-
-                        if (instaResearch > 0)
+                        
+                        if (staticVariables.instaResearch > 0)
                             if (Find.ResearchManager.currentProj != null)
                             {
-                                Find.ResearchManager.ResearchPerformed(500f / 0.009f, null);
-                                instaResearch--;
-                                this.configFile.Descendants("settings").Descendants().First((XElement x) => x.Attribute("name").Value == "instaResearch").SetValue("\n\t\t" + instaResearch + "\n\t");
-                                this.configFile.Save(this.ConfigFullPath);
+                                Find.ResearchManager.ResearchPerformed(400f / 0.009f, null);
+                                staticVariables.instaResearch--;
                             }
-
-                        lastTickTick = Find.TickManager.TicksGame;
+                        this.instanceVariableHolder.lastTickTick = Find.TickManager.TicksGame;
                     }
                 }))();
 
@@ -246,8 +238,7 @@ namespace Ankh
             switch (parameters[0])
             {
                 case "callTheGods":
-                    Action<bool, bool> action;
-                    if (gods.TryGetValue(parameters[1], out action))
+                    if (gods.TryGetValue(parameters[1], out Action<bool, bool> action))
                         action.Invoke(bool.Parse(parameters[2]), bool.Parse(parameters[3]));
                     break;
                 case "survivalReward":
@@ -262,25 +253,9 @@ namespace Ankh
             }
         }
 
-        public int SubtractZap()
-        {
-            zapCount--;
-            this.configFile.Descendants("settings").Descendants().First((XElement x) => x.Attribute("name").Value == "zapCount").SetValue("\n\t\t" + zapCount + "\n\t");
-            this.configFile.Save(this.ConfigFullPath);
-            return zapCount;
-        }
-
-        public int SubtractTherm()
-        {
-            thermCount--;
-            this.configFile.Descendants("settings").Descendants().First((XElement x) => x.Attribute("name").Value == "thermCount").SetValue("\n\t\t" + thermCount + "\n\t");
-            this.configFile.Save(this.ConfigFullPath);
-            return thermCount;
-        }
-
         public void AddToScheduler(int ticks, params string[] parameters)
         {
-            Log.Message("Scheduled for " + GenDate.TicksToDays(ticks) + "days: " + string.Join(" ", parameters));
+            Log.Message("Scheduled in " + GenDate.TicksToDays(ticks) + " days: " + string.Join(" ", parameters));
 
             ticks += Find.TickManager.TicksGame;
             if (!this.instanceVariableHolder.scheduler.ContainsKey(ticks))
@@ -291,13 +266,13 @@ namespace Ankh
         private void OnDestroy()
         {
             XmlDocument xmlDocument = new XmlDocument();
-            XmlSerializer serializer = new XmlSerializer(typeof(List<InstanceVariables>));
+            XmlSerializer serializer = new XmlSerializer(typeof(StaticVariables));
             using (MemoryStream stream = new MemoryStream())
             {
-                serializer.Serialize(stream, this.instanceVariables);
+                serializer.Serialize(stream, staticVariables);
                 stream.Position = 0;
                 xmlDocument.Load(stream);
-                xmlDocument.Save(this.InstanceVariablePath);
+                xmlDocument.Save(InstanceVariablePath);
             }
         }
 
@@ -399,16 +374,14 @@ namespace Ankh
         }
 
         private void AddGods() => gods = new Dictionary<string, Action<bool, bool>>
-            {
+        {
                 {
                     "zap",
                     delegate (bool favor, bool letter)
                     {
                         if (favor)
                         {
-                            zapCount++;
-                            this.configFile.Descendants("settings").Descendants().First((XElement x) => x.Attribute("name").Value == "zapCount").SetValue("\n\t\t" + zapCount + "\n\t");
-                            this.configFile.Save(this.ConfigFullPath);
+                            staticVariables.zapCount++;
 
                             List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(ThingDef.Named("ZAPActivator"))).ToList();
 
@@ -435,53 +408,41 @@ namespace Ankh
                     }
                 },
                 {
-                    "peg",
+                    "sparto",
                     delegate (bool favor, bool letter)
                     {
                         if (favor)
                         {
                             Map map = Find.AnyPlayerHomeMap;
-
-                            if (!CellFinder.TryFindRandomEdgeCellWith(i => map.reachability.CanReachColony(i), map, out IntVec3 position))
-                                throw new Exception();
-                            Pawn pawn = PawnGenerator.GeneratePawn(new PawnGenerationRequest(Rand.Bool ? PawnKindDefOf.SpaceSoldier : DefDatabase<PawnKindDef>.AllDefsListForReading.Where(p => p.RaceProps.Humanlike && !p.factionLeader).RandomElement(), Faction.OfPlayer, PawnGenerationContext.NonPlayer, map, true, false, false, false, true, false, 26f, true, true, true, p => !p.story.traits.HasTrait(TraitDef.Named("Prosthophile"))));
-
-                            GenSpawn.Spawn(pawn, position, map);
-
-                            DefDatabase<SkillDef>.AllDefsListForReading.ForEach(sd => pawn.skills.GetSkill(sd).Level=Rand.Range(15,20));
-
-                            List<RecipeDef> source = DefDatabase<RecipeDef>.AllDefsListForReading.Where(rd =>
-                            rd.fixedIngredientFilter.AllowedThingDefs.Any(td => td.isBodyPartOrImplant) && rd.addsHediff != null && rd.addsHediff.addedPartProps != null
-                            && rd.addsHediff.addedPartProps.partEfficiency >= 1).ToList();
                             
-                            if (source.Any())
-                            {
-                                source.RemoveRange(0, Math.Max(source.Count / 6 * 1, 5));
+                            if (!map.areaManager.Home.ActiveCells.Where(i => i.Standable(map)).TryRandomElement(out IntVec3 position))
+                                throw new Exception("no home cell");
 
-                                source.ForEach(recipeDef =>
-                                {
-                                    if (Rand.Value > 0.6)
-                                    {
-                                        if (recipeDef.Worker.GetPartsToApplyOn(pawn, recipeDef).Any<BodyPartRecord>())
-                                        {
-                                            recipeDef.Worker.ApplyOnPawn(pawn, recipeDef.Worker.GetPartsToApplyOn(pawn, recipeDef).RandomElement<BodyPartRecord>(), null, (List<Thing>)typeof(PawnTechHediffsGenerator).GetField("emptyIngredientsList", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null));
-                                        }
-                                    }
-                                });
-                            }
+                            if(!DefDatabase<ThingDef>.AllDefsListForReading.Where(def => def.equipmentType == EquipmentType.Primary && !(def.weaponTags?.TrueForAll(s => s.Contains("Mechanoid") || s.Contains("Turret") || s.Contains("Artillery")) ?? false)).ToList().TryRandomElement(out ThingDef tDef))
+                                throw new Exception("no weapon");
+
+                            Thing thing = ThingMaker.MakeThing(tDef, tDef.MadeFromStuff ? GenStuff.RandomStuffFor(tDef) : null);
+                            CompQuality qual = thing.TryGetComp<CompQuality>();
+                            if(qual != null)
+                                qual.SetQuality(QualityCategory.Normal, ArtGenerationContext.Colony);
+
+                            GenSpawn.Spawn(thing, position, map);
+                            Vector3 vec = position.ToVector3();
+                            MoteMaker.ThrowSmoke(vec, map, 5);
+                            MoteMaker.ThrowMetaPuff(vec, map);
+
                             if (letter)
-                                Find.LetterStack.ReceiveLetter("peg's favor",
-                                    "The god of pirates shows mercy on your colony. A hapless pirate was kicked from Peg's flagship and fell near the colony", LetterType.Good, pawn);
+                                Find.LetterStack.ReceiveLetter("sparto's favor",
+                                    "The god of war shows mercy on your colony. A piece of equipment below his godly standards got thrown on your colony", LetterType.Good, thing);
                         }
                         else
                         {
                             IncidentParms incidentParms = new IncidentParms(){
-                            faction = Find.World.factionManager.AllFactions.ToList().Where((Faction f) => f?.def.Equals(FactionDefOf.Pirate) ?? false)?.RandomElement(),
                                 target = Find.AnyPlayerHomeMap
                             };
 
-                            Letter letterobj = new Letter("peg's wrath",
-                                    "The god of pirates is angry at your colony. She commands the pirates of this world to attack", LetterType.BadUrgent);
+                            Letter letterobj = new Letter("sparto's wrath",
+                                    "The god of war is angry at your colony. She commands the locals of this world to attack", LetterType.BadUrgent);
 
                             CustomIncidentCall.CallEnemyRaid(incidentParms, letter ? letterobj : null);
 
@@ -489,185 +450,288 @@ namespace Ankh
                     }
                 },
                 {
-                    "therm",
+                    "peg",
                     delegate (bool favor, bool letter)
                     {
                         if (favor)
                         {
-                            thermCount++;
-                            this.configFile.Descendants("settings").Descendants().First((XElement x) => x.Attribute("name").Value == "thermCount").SetValue("\n\t\t" + zapCount + "\n\t");
-                            this.configFile.Save(this.ConfigFullPath);
+                            staticVariables.pegCount++;
 
-                            List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(ThingDef.Named("ZAPActivator"))).ToList();
-
-                            if (letter)
-                                Find.LetterStack.ReceiveLetter("therm's favor",
-                                    "The god of fire shows mercy on your colony. He commands the fires of this little world to follow your orders.", LetterType.Good, new GlobalTargetInfo(activators.NullOrEmpty() ? null : activators.RandomElement()));
-
-                            /*
-                            Thing geyser = ThingMaker.MakeThing(ThingDefOf.SteamGeyser);
-                            IntVec3 intVec;
-                            Map map = Find.AnyPlayerHomeMap;
-
-                            Predicate<IntVec3> validator = delegate (IntVec3 c)
-                            {
-                                if (c.Fogged(map))
-                                {
-                                    return false;
-                                }
-                                foreach (IntVec3 current in GenAdj.CellsOccupiedBy(c, Rot4.North, geyser.def.Size))
-                                {
-                                    if (!current.Standable(map) && current.GetFirstThing(map, ThingDefOf.SteamGeyser) != null)
-                                        return false;
-                                }
-                                return map.reachability.CanReachColony(c);
-                            };
-
-                            while (!RCellFinder.TryFindRandomSpotJustOutsideColony(map.areaManager.Home.ActiveCells.RandomElement(), map, map.mapPawns.AllPawns.RandomElement(), out intVec, validator)) { };
-
-                            GenSpawn.Spawn(geyser, intVec, map);
-
-                            foreach (IntVec3 current in GenAdj.CellsOccupiedBy(geyser))
-                            {
-                                foreach (Thing current2 in map.thingGrid.ThingsAt(current))
-                                {
-                                    if (current2 is Plant || current2 is Filth)
-                                    {
-                                        current2.Destroy(DestroyMode.Vanish);
-                                    }
-                                }
-                            }
+                            ThingDef peg = ThingDef.Named("PEGActivator");
+                            List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(peg)).ToList();
 
                             if (letter)
-                                Find.LetterStack.ReceiveLetter("therms's favor",
-                                    "The god therm shows mercy on your colony. He commands the planet to unearth a geothermal vent near the colony", LetterType.Good, geyser);
-                            */
+                                Find.LetterStack.ReceiveLetter("peg's favor",
+                                    "The god of pirates shows mercy on your colony. He commands the fires of this world to defend you", LetterType.Good, new GlobalTargetInfo(activators.NullOrEmpty() ? null : activators.RandomElement()));
                         }
                         else
                         {
+                            for(int i=0; i<2; i++)
+                            {
+                                Map map = Find.AnyPlayerHomeMap;
+                                if (!map.areaManager.Home.ActiveCells.Where(iv => iv.Standable(map)).TryRandomElement( out IntVec3 position))
+                                    throw new Exception();
+                                GenExplosion.DoExplosion(position, map, 3.9f, DamageDefOf.Bomb, null, null, null, null, null, 0f, 1, false, null, 0f, 1);
+                            }
+                            if (letter)
+                                Find.LetterStack.ReceiveLetter("peg's wrath",
+                                    "The god of pirates is angry at your colony. He commands the fires to strike down on your colony", LetterType.BadUrgent);
+                        }
+                    }
+                },
+                {
+                    "repo",
+                    delegate (bool favor, bool letter)
+                    {
+                        if (favor)
+                        {
+                            staticVariables.repoCount++;
+                            ThingDef peg = ThingDef.Named("REPOActivator");
+                            List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(peg)).ToList();
+                            if (letter)
+                                Find.LetterStack.ReceiveLetter("repo's favor",
+                                    "The god of organs shows mercy on your colony", LetterType.Good, new GlobalTargetInfo(activators.NullOrEmpty() ? null : activators.RandomElement()));
+                        }
+                        else
+                        {
+                            List<BodyPartRecord> parts = new List<BodyPartRecord>();
                             List<Pawn> pawns = Find.ColonistBar.GetColonistsInOrder().Where((Pawn x) => !x.Dead).ToList();
                             if (pawns.Count > 1)
                                 pawns.RemoveAll(x => x.NameStringShort.EqualsIgnoreCase("erdelf"));
                             if (pawns.Count > 1)
                                 pawns.RemoveAll(x => x.NameStringShort.EqualsIgnoreCase("Serpenthalis"));
 
-                            Pawn p = pawns.RandomElement();
+                            Predicate<BodyPartRecord> bodyPartRecord = delegate (BodyPartRecord x)
+                            {
+                                if (!(x.def.dontSuggestAmputation || x.depth == BodyPartDepth.Inside))
+                                    return true;
+                                return false;
+                            };
+
+                            if (pawns.Count <= 0)
+                                throw new Exception();
+
+                            Pawn p = null;
+                            while (parts.NullOrEmpty())
+                            {
+                                p = pawns.RandomElement();
+                                parts = p.health.hediffSet.GetNotMissingParts().Where((BodyPartRecord x) => bodyPartRecord.Invoke(x) && !bodyPartRecord.Invoke(x.parent)).ToList();
+                                pawns.Remove(p);
+                            }
+
+                            if (parts.NullOrEmpty())
+                                throw new Exception();
+
+                            BodyPartRecord part = parts.RandomElement();
+
+                            p.health.AddHediff(HediffDefOf.MissingBodyPart, part);
                             if (letter)
-                                Find.LetterStack.ReceiveLetter("therms's wrath",
-                                    "The god therm is angry at your colony. He commands the body of " + p.NameStringShort + " to combust", LetterType.BadUrgent, p);
-                            foreach (IntVec3 intVec in GenAdjFast.AdjacentCells8Way(p.Position, p.Rotation, p.RotatedSize))
-                                if (Rand.Bool)
-                                    GenExplosion.DoExplosion(intVec, p.Map, 2f, DamageDefOf.Flame, null);
-                                else
-                                    GenExplosion.DoExplosion(intVec, p.Map, 2f, DamageDefOf.Stun, null);
+                                Find.LetterStack.ReceiveLetter("repo's wrath",
+                                        "The god of organs is angry at your colony. He commands the " + part.def.LabelCap.ToLower() + " of " + p.NameStringShort + " to damage itself", LetterType.BadUrgent, p);
+                        }
+                    }
+                },
+                {
+                    "bob",
+                    delegate(bool favor, bool letter)
+                    {
+                        if(favor)
+                        {
+                            staticVariables.bobCount++;
+                            ThingDef peg = ThingDef.Named("BOBActivator");
+                            List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(peg)).ToList();
+                            if (letter)
+                                Find.LetterStack.ReceiveLetter("bob's favor",
+                                    "The god of buildings shows mercy on your colony", LetterType.Good, new GlobalTargetInfo(activators.NullOrEmpty() ? null : activators.RandomElement()));
+                        }else
+                        {
+                            List<Building> walls = Find.AnyPlayerHomeMap.listerBuildings.AllBuildingsColonistOfDef(ThingDefOf.Wall).ToList();
+
+                            if(walls == null || walls.Count() < 2)
+                                throw new Exception();
+
+                            Building wall = null;
+                            for(int i = 0; i<2; i++)
+                            {
+                                if(walls.TryRandomElement(out wall))
+                                {
+                                    wall.Destroy();
+                                    walls.Remove(wall);
+                                }
+                            }
+                            if (letter)
+                                Find.LetterStack.ReceiveLetter("bob's wrath",
+                                        "The god of buildings is angry at your colony.", LetterType.BadUrgent, wall);
                         }
                     }
                 },
                 {
                     "rootsy",
-                    delegate (bool favor, bool letter)
-                     {
-                         if (favor)
-                         {
-                             List<Plant> list = new List<Plant>();
-                             foreach (Map map in Find.Maps.Where((Map map) => map.ParentFaction == Faction.OfPlayer))
-                                 list.AddRange(map.listerThings.ThingsInGroup(ThingRequestGroup.FoodSource).Where((Thing thing) => thing is Plant && thing.def.plant.growDays <= 16f && (thing as Plant).LifeStage == PlantLifeStage.Growing && thing.Map.zoneManager.ZoneAt(thing.Position) is Zone_Growing && !thing.def.defName.EqualsIgnoreCase(ThingDefOf.PlantGrass.defName)).Cast<Plant>());
-                             if (list.Count < 10)
-                                 throw new Exception();
+                    delegate(bool favor, bool letter)
+                    {
+                        if(favor)
+                        {
+                            staticVariables.rootsyCount++;
+                            ThingDef peg = ThingDef.Named("ROOTSYActivator");
+                            List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(peg)).ToList();
+                            if (letter)
+                                Find.LetterStack.ReceiveLetter("rootsy's favor",
+                                    "The god of plants shows mercy on your colony", LetterType.Good, new GlobalTargetInfo(activators.NullOrEmpty() ? null : activators.RandomElement()));
+                        } else
+                        {
+                            List<Plant> list = new List<Plant>();
+                            foreach (Map map in Find.Maps.Where((Map map) => map.ParentFaction == Faction.OfPlayer))
+                                list.AddRange(map.listerThings.ThingsInGroup(ThingRequestGroup.FoodSource).Where((Thing thing) => thing is Plant && thing.def.plant.growDays <= 16f && (thing as Plant).LifeStage == PlantLifeStage.Growing && thing.Map.zoneManager.ZoneAt(thing.Position) is Zone_Growing && !thing.def.defName.EqualsIgnoreCase(ThingDefOf.PlantGrass.defName)).Cast<Plant>());
+                            if (list.Count < 10)
+                                throw new Exception();
+                            list = list.InRandomOrder().Take(30).ToList();
 
+                            list.ForEach(plant =>
+                            {
+                                plant.CropBlighted();
+                                list.Remove(plant);
+                            });
 
-                             list.ForEach(plant =>
-                             {
-                                 plant.Growth = 1f;
-                                 plant.Map.mapDrawer.MapMeshDirty(plant.Position, MapMeshFlag.Things);
-                                 list.Remove(plant);
-                             });
-                             if (letter)
-                                 Find.LetterStack.ReceiveLetter("rootsy's favor",
-                                     "The god of flowers shows mercy on your colony. He commands the roots under your colony to grow 30 of your plants to maturation", LetterType.Good);
-                         }
-                         else
-                         {
-                             Letter letterobj = new Letter("rootsy's wrath",
+                            if(letter)
+                                Find.LetterStack.ReceiveLetter("rootsy's wrath",
                                      "The god of flowers is angry at your colony. He commands the roots under your colony to blight", LetterType.BadNonUrgent);
 
-                             CustomIncidentCall.CallBlight(letter ? letterobj : null);
-                         }
-                     }
-                },
-                {
-                    "moo",
-                    delegate (bool favor, bool letter)
-                    {
-                        if (favor)
-                        {
-                            List<Pawn> capacity = Find.AnyPlayerHomeMap.mapPawns.AllPawnsSpawned.Where((Pawn x) =>
-                               x.RaceProps.Animal && x.Faction == null && !x.Position.Fogged(x.Map) && !x.InMentalState && !x.Downed).ToList();
-                            float value = Rand.Range(1000, 1000 * Find.ColonistBar.GetColonistsInOrder().Count);
-                            Pawn pawn = null;
-                            while (value > 0f && capacity.TryRandomElementByWeight((Pawn x) => x.kindDef.combatPower, out pawn))
-                            {
-                                if (pawn.guest != null)
-                                    pawn.guest.SetGuestStatus(null, false);
-                                //                        pawn.mindState.mentalStateHandler.cle
-                                pawn.SetFaction(Faction.OfPlayer);
-                                capacity.Remove(pawn);
-                                value -= pawn.kindDef.combatPower;
-                            }
-                            if (value > 0f)
-                                while (value > 0)
-                                {
-                                    Thing thing = PawnGenerator.GeneratePawn(PawnKindDef.Named("Cow"));
-
-                                    Map map = Find.AnyPlayerHomeMap;
-
-                                    if (!CellFinder.TryFindRandomEdgeCellWith(x => x.InBounds(map) && map.reachability.CanReachColony(x), map, out IntVec3 c))
-                                        throw new Exception();
-
-                                    GenSpawn.Spawn(thing, c, map);
-                                    value -= thing.MarketValue;
-                                }
-                            if (letter)
-                                Find.LetterStack.ReceiveLetter("moo's favor",
-                                     "The god of animals shows mercy on your colony. He commands his subordinates to be devoted to your colony", LetterType.Good, pawn);
-
-                        }
-                        else
-                        {
-                            Letter letterobj = new Letter("moo's wrath",
-                                    "The god of animals is angry at your colony. He commands his subordinates to teach you a lesson", LetterType.BadUrgent);
-
-                            IncidentParms parms = new IncidentParms(){
-                                target = Find.AnyPlayerHomeMap,
-                                points = 200f * Mathf.Log(Find.ColonistBar.GetColonistsInOrder().Where(x => !x.Dead && !x.Downed).Count()-1)*2f
-                            };
-                            CustomIncidentCall.CallManhunter(parms, letter ? letterobj : null);
                         }
                     }
                 },
                 {
-                    "beepboop",
-                    delegate (bool favor, bool letter)
-                   {
-                       if (favor)
-                       {
-                           instaResearch++;
-                           this.configFile.Descendants("settings").Descendants().First((XElement x) => x.Attribute("name").Value == "instaResearch").SetValue("\n\t\t" + instaResearch + "\n\t");
-                           this.configFile.Save(this.ConfigFullPath);
-                           if (letter)
-                               Find.LetterStack.ReceiveLetter("beepboop's favor",
-                                    "The god beepboop shows mercy on your colony. The colonists find the missing link to finish their current research.", LetterType.Good);
-                       }
-                       else
-                       {
-                           Letter letterobj = new Letter("beepboop's wrath",
-                                   "The god beepboop is angry at your colony. He causes a military transporter to crash near your colony", LetterType.BadUrgent);
-                           IncidentParms parms = new IncidentParms(){
-                            target = Find.AnyPlayerHomeMap
-                           };
-                           CustomIncidentCall.CallShipPart(letter ? letterobj : null, Rand.Value > 0.2f ? 1 : 2);
-                       }
-                   }
+                    "fondle",
+                    delegate(bool favor, bool letter)
+                    {
+                        if(favor)
+                        {
+                            Map map = Find.AnyPlayerHomeMap;
+
+                            if (!map.areaManager.Home.ActiveCells.Where(i => i.Standable(map)).TryRandomElement(out IntVec3 position))
+                                throw new Exception();
+
+                            DefDatabase<ThingDef>.AllDefsListForReading.Where(td => td.thingClass == typeof(Building_Art)).TryRandomElement(out ThingDef tDef);
+
+                            Thing thing = ThingMaker.MakeThing(tDef, tDef.MadeFromStuff ? GenStuff.RandomStuffFor(tDef) : null);
+                            CompQuality qual = thing.TryGetComp<CompQuality>();
+                            if(qual != null)
+                                qual.SetQuality(Rand.Bool ?
+                                    QualityCategory.Normal : Rand.Bool ?
+                                    QualityCategory.Good : Rand.Bool ?
+                                    QualityCategory.Superior : Rand.Bool ?
+                                    QualityCategory.Excellent : Rand.Bool ?
+                                    QualityCategory.Masterwork :
+                                    QualityCategory.Legendary, ArtGenerationContext.Colony);
+
+                            GenSpawn.Spawn(thing, position, map);
+                            Vector3 vec = position.ToVector3();
+                            MoteMaker.ThrowSmoke(vec, map, 5);
+                            MoteMaker.ThrowMetaPuff(vec, map);
+
+                            if (letter)
+                                Find.LetterStack.ReceiveLetter("fondle's favor",
+                                    "The god of art shows mercy on your colony.", LetterType.Good, thing);
+                        }else
+                        {
+                            Map map = Find.AnyPlayerHomeMap;
+
+                            map.listerThings.AllThings.Where(t => t.TryGetComp<CompQuality>()?.Quality > QualityCategory.Awful && (t.Position.GetZone(map) is Zone_Stockpile || t.Faction == Faction.OfPlayer)).TryRandomElement(out Thing thing);
+
+                            if(thing == null)
+                                throw new Exception();
+
+                            thing.TryGetComp<CompQuality>().SetQuality(QualityCategory.Awful, ArtGenerationContext.Colony);
+
+                            if(letter)
+                                Find.LetterStack.ReceiveLetter("fondle's wrath",
+                                     "The god of art is angry at your colony.", LetterType.BadNonUrgent, thing);
+                        }
+                    }
+                },
+                {
+                    "moo",
+                    delegate(bool favor, bool letter)
+                    {
+                        Map map = Find.AnyPlayerHomeMap;
+                        if (!DefDatabase<PawnKindDef>.AllDefsListForReading.Where(p => p.RaceProps.Animal).ToList().TryRandomElement(out PawnKindDef pawnKindDef))
+                        {
+                            throw new Exception();
+                        }
+                        if (!RCellFinder.TryFindRandomPawnEntryCell(out IntVec3 root, map))
+                        {
+                            throw new Exception();
+                        }
+                        Pawn pawn = PawnGenerator.GeneratePawn(pawnKindDef);
+
+                        IntVec3 loc = CellFinder.RandomClosewalkCellNear(root, map, 10);
+                        GenSpawn.Spawn(pawn, loc, map);
+
+                        if(favor)
+                        {
+                            pawn.SetFaction(Faction.OfPlayer);
+                            if (letter)
+                                Find.LetterStack.ReceiveLetter("moo's favor",
+                                     "The god of animals shows mercy on your colony. He commands his subordinate to be devoted to your colony", LetterType.Good, pawn);
+
+                        } else
+                        {
+                            pawn.mindState.mentalStateHandler.TryStartMentalState(MentalStateDefOf.ManhunterPermanent, null, true, false, null);
+                            if(letter)
+                                Find.LetterStack.ReceiveLetter("moo's wrath",
+                                    "The god of animals is angry at your colony. He commands his subordinate to teach you a lesson", LetterType.BadUrgent, pawn);
+
+                        }
+                    }
+                },
+                {
+                    "clink",
+                    delegate(bool favor, bool letter)
+                    {
+                        if(favor)
+                        {
+                            IncidentDefOf.OrbitalTraderArrival.Worker.TryExecute(new IncidentParms() { target = Find.AnyPlayerHomeMap });
+                            if(letter)
+                                Find.LetterStack.ReceiveLetter("clink's favor",
+                                         "The god of commerce shows mercy on your colony.", LetterType.Good);
+                        } else
+                        {
+                            Map map = Find.AnyPlayerHomeMap;
+                            List<Thing> silver = map.listerThings.ThingsOfDef(ThingDefOf.Silver);
+
+                            if(silver.Sum(t => t.stackCount) < 100)
+                                throw new Exception();
+
+                            int i = 100;
+
+                            while(i > 0)
+                            {
+                                Thing piece = silver.First();
+                                int x = Math.Min(piece.stackCount, i);
+                                i -= x;
+                                piece.stackCount -= x;
+
+                                if(piece.stackCount == 0)
+                                {
+                                    silver.Remove(piece);
+                                    piece.Destroy();
+                                }
+                            }
+                            for(int c = 0; c<30; c++)
+                            {
+                                if (!map.areaManager.Home.ActiveCells.Where(l => l.Standable(map)).TryRandomElement(out IntVec3 position))
+                                    throw new Exception();
+
+                                Vector3 vec = position.ToVector3();
+                                MoteMaker.ThrowSmoke(vec, map, 5);
+                                MoteMaker.ThrowMetaPuff(vec, map);
+
+                                GenSpawn.Spawn(ThingMaker.MakeThing(ThingDefOf.Steel), position, map);
+                            }
+                            if(letter)
+                                Find.LetterStack.ReceiveLetter("clink's wrath",
+                                    "The god of commerce is angry at your colony.", LetterType.BadNonUrgent);
+                        }
+                    }
                 },
                 {
                     "fnargh",
@@ -708,84 +772,260 @@ namespace Ankh
                     }
                 },
                 {
-                    "repo",
+                    "therm",
                     delegate (bool favor, bool letter)
                     {
                         if (favor)
                         {
-                            Map map = Find.AnyPlayerHomeMap;
-                            MethodInfo missing = typeof(HealthCardUtility).GetMethod("VisibleHediffs", BindingFlags.Static | BindingFlags.NonPublic);
-                            List<Pawn> pawns = Find.ColonistBar.GetColonistsInOrder().Where((Pawn x) => !x.Dead && ((IEnumerable<Hediff>)missing.Invoke(null, new object[] { x, false })).Where(h => h.GetType() == typeof(Hediff_MissingPart)).Count() > 0).ToList();
+                            staticVariables.thermCount++;
 
-                            if (!pawns.NullOrEmpty())
-                            {
-                                Pawn p = pawns.RandomElement();
-                                BodyPartRecord part = ((IEnumerable<Hediff>)missing.Invoke(null, new object[] { p, false })).Where(h => h.GetType() == typeof(Hediff_MissingPart)).RandomElement().Part;
-                                p.health.RestorePart(part);
+                            List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(ThingDef.Named("THERMActivator"))).ToList();
 
-                                if (letter)
-                                    Find.LetterStack.ReceiveLetter("repo's favor",
-                                        "The god of organs shows mercy on your colony. He restores the missing " + part.def.LabelCap.ToLower() + " of " + p.NameStringShort, LetterType.Good, new GlobalTargetInfo(p.Position, map));
-                            }
-                            else
-                            {
-                                IntVec3 intVec = DropCellFinder.TradeDropSpot(map);
-#pragma warning disable IDE0018 // Inlinevariablendeklaration
-                                ThingDef organDef;
-#pragma warning restore IDE0018 // Inlinevariablendeklaration
-
-                                while (!DefDatabase<ThingDef>.AllDefsListForReading.Where((ThingDef x) =>
-                                x.thingCategories != null && x.thingCategories.Any((ThingCategoryDef f) =>
-                                ThingCategoryDefOf.BodyParts.ThisAndChildCategoryDefs.Contains(f)) && DefDatabase<RecipeDef>.AllDefsListForReading.Where(rd => rd.IsIngredient(x)).
-                                FirstOrDefault()?.addsHediff?.addedPartProps?.partEfficiency >= 1).TryRandomElement(out organDef)) { }
-                                
-                                TradeUtility.SpawnDropPod(intVec, map, ThingMaker.MakeThing(organDef));
-                                TradeUtility.SpawnDropPod(intVec, map, ThingMaker.MakeThing(ThingDefOf.GlitterworldMedicine));
-                                if (letter)
-                                    Find.LetterStack.ReceiveLetter("repo's favor",
-                                        "The god of organs shows mercy on your colony. He sends you a little gift from his personal collection", LetterType.Good, new GlobalTargetInfo(intVec, map));
-                            }
-                        }
-                        else
+                            if (letter)
+                                Find.LetterStack.ReceiveLetter("therm's favor",
+                                    "The god of fire shows mercy on your colony. He commands the fires of this little world to follow your orders.", LetterType.Good, new GlobalTargetInfo(activators.NullOrEmpty() ? null : activators.RandomElement()));
+                        } else
                         {
-                            List<BodyPartRecord> parts = new List<BodyPartRecord>();
                             List<Pawn> pawns = Find.ColonistBar.GetColonistsInOrder().Where((Pawn x) => !x.Dead).ToList();
                             if (pawns.Count > 1)
                                 pawns.RemoveAll(x => x.NameStringShort.EqualsIgnoreCase("erdelf"));
                             if (pawns.Count > 1)
                                 pawns.RemoveAll(x => x.NameStringShort.EqualsIgnoreCase("Serpenthalis"));
 
-                            Predicate<BodyPartRecord> bodyPartRecord = delegate (BodyPartRecord x)
-                            {
-                                if (!(x.def.dontSuggestAmputation || x.depth == BodyPartDepth.Inside))
-                                    return true;
-                                return false;
-                            };
+                            Pawn p = pawns.RandomElement();
+                            if (letter)
+                                Find.LetterStack.ReceiveLetter("therms's wrath",
+                                    "The god therm is angry at your colony. He commands the body of " + p.NameStringShort + " to combust", LetterType.BadUrgent, p);
+                            foreach (IntVec3 intVec in GenAdjFast.AdjacentCells8Way(p.Position, p.Rotation, p.RotatedSize))
+                                if (Rand.Bool)
+                                    GenExplosion.DoExplosion(intVec, p.Map, 2f, DamageDefOf.Flame, null);
+                                else
+                                    GenExplosion.DoExplosion(intVec, p.Map, 2f, DamageDefOf.Stun, null);
+                        }
+                    }
+                },
+                {
+                    "beepboop",
+                    delegate (bool favor, bool letter)
+                    {
+                        if(favor)
+                        {
+                            staticVariables.instaResearch++;
+                            if (letter)
+                               Find.LetterStack.ReceiveLetter("beepboop's favor",
+                                    "The god beepboop shows mercy on your colony. The colonists find the missing link to finish their current research.", LetterType.Good);
 
-                            if (pawns.Count <= 0)
+                        } else
+                        {
+                            Map map = Find.AnyPlayerHomeMap;
+                            if (!map.areaManager.Home.ActiveCells.Where(iv => iv.Standable(map)).TryRandomElement( out IntVec3 position))
                                 throw new Exception();
 
-                            Pawn p = null;
-                            while (parts.NullOrEmpty())
+                            PawnKindDef localKindDef = PawnKindDef.Named("Scyther");
+                            Faction faction = FactionUtility.DefaultFactionFrom(localKindDef.defaultFactionType);
+                            Pawn newPawn = PawnGenerator.GeneratePawn(localKindDef, faction);
+
+                            GenSpawn.Spawn(newPawn, position, map);
+
+                            if (faction != null && faction != Faction.OfPlayer)
                             {
-                                p = pawns.RandomElement();
-                                parts = p.health.hediffSet.GetNotMissingParts().Where((BodyPartRecord x) => bodyPartRecord.Invoke(x) && !bodyPartRecord.Invoke(x.parent)).ToList();
-                                pawns.Remove(p);
+                                Lord lord = null;
+                                if (newPawn.Map.mapPawns.SpawnedPawnsInFaction(faction).Any((Pawn p) => p != newPawn))
+                                {
+                                    Predicate<Thing> validator = (Thing p) => p != newPawn && ((Pawn)p).GetLord() != null;
+                                    Pawn p2 = (Pawn)GenClosest.ClosestThing_Global(newPawn.Position, newPawn.Map.mapPawns.SpawnedPawnsInFaction(faction), 99999f, validator);
+                                    lord = p2.GetLord();
+                                }
+                                if (lord == null)
+                                {
+                                    LordJob_DefendPoint lordJob = new LordJob_DefendPoint(newPawn.Position);
+                                    lord = LordMaker.MakeNewLord(faction, lordJob, Find.VisibleMap, null);
+                                }
+                                lord.AddPawn(newPawn);
+                            }
+                            newPawn.DeSpawn();
+
+                            TradeUtility.SpawnDropPod(position, map, newPawn);
+
+
+                            if (letter)
+                                Find.LetterStack.ReceiveLetter("beepboop's wrath",
+                                    "The god of robots is angry at your colony.", LetterType.BadUrgent, new GlobalTargetInfo(position, map));
+                        }
+                    }
+                },
+                {
+                    "humour",
+                    delegate (bool favor, bool letter)
+                    {
+                        if(favor)
+                        {
+                            staticVariables.humourCount++;
+
+                            List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(ThingDef.Named("HUMOURActivator"))).ToList();
+
+                            if (letter)
+                                Find.LetterStack.ReceiveLetter("humour's favor",
+                                    "The god of healing shows mercy on your colony.", LetterType.Good, new GlobalTargetInfo(activators.NullOrEmpty() ? null : activators.RandomElement()));
+                        } else
+                        {
+                            Pawn p = Find.ColonistBar?.GetColonistsInOrder()?.Where((Pawn x) => !x.Dead && !x.Downed && !x.mindState.mentalStateHandler.InMentalState && !x.jobs.curDriver.asleep).RandomElement();
+                            if (p != null)
+                            {
+                                p.health.AddHediff(HediffDefOf.WoundInfection, p.health.hediffSet.GetRandomNotMissingPart(DamageDefOf.Bullet));
+                                if (letter)
+                                    Find.LetterStack.ReceiveLetter("humour's wrath",
+                                        "The god humour is angry at your colony.", LetterType.BadUrgent, p);
+                            }
+                            else
+                                throw new Exception();
+                        }
+                    }
+                },
+                {
+                    "taylor",
+                    delegate (bool favor, bool letter)
+                    {
+                        if(favor)
+                        {
+                            Map map = Find.AnyPlayerHomeMap;
+                            IEnumerable<ThingDef> apparelList = DefDatabase<ThingDef>.AllDefsListForReading.Where(td => td.IsApparel);
+
+                            IntVec3 intVec = DropCellFinder.TradeDropSpot(map);
+                            for(int i=0;i<5;i++)
+                            {
+                                if(apparelList.TryRandomElement(out ThingDef apparelDef))
+                                {
+                                    Thing apparel = ThingMaker.MakeThing(apparelDef, apparelDef.MadeFromStuff ? GenStuff.RandomStuffFor(apparelDef) : null);
+                                    CompQuality qual = apparel.TryGetComp<CompQuality>();
+                                    if(qual != null)
+                                        qual.SetQuality(Rand.Bool ?
+                                            QualityCategory.Normal : Rand.Bool ?
+                                            QualityCategory.Good : Rand.Bool ?
+                                            QualityCategory.Superior : Rand.Bool ?
+                                            QualityCategory.Excellent : Rand.Bool ?
+                                            QualityCategory.Masterwork :
+                                            QualityCategory.Legendary, ArtGenerationContext.Colony);
+                                    TradeUtility.SpawnDropPod(intVec, map, apparel);
+                                }
+                            }
+                            if (letter)
+                                Find.LetterStack.ReceiveLetter("taylor's favor",
+                                    "The god of clothing shows mercy on your colony.", LetterType.Good, new GlobalTargetInfo(intVec, map));
+                        } else
+                        {
+                            List<Pawn> pawns = Find.ColonistBar.GetColonistsInOrder().Where((Pawn x) => !x.Dead).ToList();
+                            if (pawns.Count > 1)
+                                pawns.RemoveAll(x => x.NameStringShort.EqualsIgnoreCase("erdelf"));
+                            if (pawns.Count > 1)
+                                pawns.RemoveAll(x => x.NameStringShort.EqualsIgnoreCase("Serpenthalis"));
+
+
+
+                            Pawn p = pawns.Where(pawn => !pawn.apparel.PsychologicallyNude).RandomElement();
+                            p.apparel.DestroyAll();
+
+                            if (letter)
+                                Find.LetterStack.ReceiveLetter("taylor's wrath",
+                                    "The god of clothing is angry at your colony. He commands the clothing on " + p.NameStringShort + " to destroy itself", LetterType.BadUrgent, p);
+                        }
+                    }
+                },
+                {
+                    "dorf",
+                    delegate (bool favor, bool letter)
+                    {
+                        if(favor)
+                        {
+                            staticVariables.dorfCount++;
+
+                            List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(ThingDef.Named("DORFActivator"))).ToList();
+
+                            if (letter)
+                                Find.LetterStack.ReceiveLetter("dorf's favor",
+                                    "The god of ming shows mercy on your colony.", LetterType.Good, new GlobalTargetInfo(activators.NullOrEmpty() ? null : activators.RandomElement()));
+                        } else
+                        {
+                            Map map = Find.AnyPlayerHomeMap;
+                            if (!map.areaManager.Home.ActiveCells.Where(iv => iv.Standable(map)).TryRandomElement( out IntVec3 position))
+                                throw new Exception();
+
+                            CellRect cellRect = CellRect.CenteredOn(position, 2);
+                            cellRect.ClipInsideMap(Find.VisibleMap);
+                            ThingDef granite = ThingDefOf.Granite;
+                            foreach (IntVec3 current in cellRect)
+                            {
+                                GenSpawn.Spawn(granite, current, Find.VisibleMap);
                             }
 
-                            if (parts.NullOrEmpty())
-                                throw new Exception();
-
-                            BodyPartRecord part = parts.RandomElement();
-
-                            p.health.AddHediff(HediffDefOf.MissingBodyPart, part);
                             if (letter)
-                                Find.LetterStack.ReceiveLetter("repo's wrath",
-                                        "The god of organs is angry at your colony. He commands the " + part.def.LabelCap.ToLower() + " of " + p.NameStringShort + " to damage itself", LetterType.BadUrgent, p);
+                                Find.LetterStack.ReceiveLetter("dorf's wrath",
+                                    "The god of mining is angry at your colony.", LetterType.BadUrgent, new GlobalTargetInfo(position, map));
+                        }
+                    }
+                },
+                {
+                    "dick",
+                    delegate(bool favor, bool letter)
+                    {
+                        if(favor)
+                        {
+
+                        } else
+                        {
+                            Map map = Find.AnyPlayerHomeMap;
+                            List<Pawn> colonists = Find.ColonistBar.GetColonistsInOrder().Where((Pawn x) => !x.Dead).ToList();
+
+                            IncidentParms parms = new IncidentParms()
+                            {
+                                target = map,
+                                points = colonists.Count * PawnKindDefOf.SpaceSoldier.combatPower,
+                                faction = Find.FactionManager.FirstFactionOfDef(FactionDefOf.SpacerHostile),
+                                raidStrategy = RaidStrategyDefOf.ImmediateAttack,
+                                raidArrivalMode = PawnsArriveMode.CenterDrop,
+                                raidPodOpenDelay = 50,
+                                spawnCenter = map.listerBuildings.ColonistsHaveBuildingWithPowerOn(ThingDefOf.OrbitalTradeBeacon) ? DropCellFinder.TradeDropSpot(map) : RCellFinder.TryFindRandomSpotJustOutsideColony(map.IsPlayerHome ? map.mapPawns.FreeColonists.RandomElement().Position : CellFinder.RandomCell(map), map, out IntVec3 spawnPoint) ? spawnPoint : CellFinder.RandomCell(map),
+                                generateFightersOnly = true,
+                                forced = true,
+                                raidNeverFleeIndividual = true
+                            };
+                            List<Pawn> pawns = new PawnGroupMaker()
+                            {
+                                kindDef = new PawnGroupKindDef()
+                                {
+                                    workerClass = typeof(CustomIncidentCall.PawnGroupKindWorker_Wrath)
+                                },
+                            }.GeneratePawns(new PawnGroupMakerParms()
+                            {
+                                map = parms.target as Map,
+                                faction = parms.faction,
+                                points = parms.points,
+                                generateFightersOnly = true,
+                                generateMeleeOnly = false,
+                                raidStrategy = parms.raidStrategy
+                            }).ToList();
+
+                            for(int i = 0; i<pawns.Count;i++)
+                            {
+                                Pawn colonist = colonists[i];
+                                Pawn pawn = pawns[i];
+
+                                pawn.Name = colonist.Name;
+                                pawn.story.traits.allTraits = colonist.story.traits.allTraits;
+                                pawn.story.childhood = colonist.story.childhood;
+                                pawn.story.adulthood = colonist.story.adulthood;
+                                pawn.skills.skills = colonist.skills.skills;
+                                pawn.health.hediffSet.hediffs = colonist.health.hediffSet.hediffs;
+                            }
+                            
+
+                            DropPodUtility.DropThingsNear(parms.spawnCenter, map, pawns.Cast<Thing>(), parms.raidPodOpenDelay, false, true, true);
+                            Lord lord = LordMaker.MakeNewLord(parms.faction, parms.raidStrategy.Worker.MakeLordJob(parms, map), map, pawns);
+                            AvoidGridMaker.RegenerateAvoidGridsFor(parms.faction, map);
                         }
                     }
                 }
-            };
+        };
 
         static void PrepareDefs()
         {
@@ -844,10 +1084,11 @@ namespace Ankh
                     defName = "ZAPActivator",
                     thingClass = typeof(Buildings.Building_ZAP),
                     label = "ZAP Activator",
-                    description = "This device is little more than an altar to Zap, engraved with his jagged yellow symbol. Use it to invoke Zap's favor.",
+                    description = "This device is little more than an altar to Zap, engraved with his jagged yellow symbol. It will defend the ones favored by zap.",
                     size = new IntVec2(1, 1),
                     passability = Traversability.PassThroughOnly,
                     category = ThingCategory.Building,
+                    tickerType = TickerType.Rare,
                     selectable = true,
                     designationCategory = DesignationCategoryDefOf.Structure,
                     useHitPoints = false,
@@ -857,7 +1098,7 @@ namespace Ankh
                     rotatable = false,
                     graphicData = new GraphicData()
                     {
-                        texPath = "Activator",
+                        texPath = "SH_zap",
                         graphicClass = typeof(Graphic_Single),
                         shaderType = ShaderType.CutoutComplex,
                         drawSize = new Vector2(1, 1)
@@ -927,7 +1168,7 @@ namespace Ankh
                 ThingDef therm = new ThingDef()
                 {
                     defName = "THERMActivator",
-                    thingClass = typeof(Buildings.Building_Therm),
+                    thingClass = typeof(Buildings.Building_THERM),
                     label = "THERM Activator",
                     description = "This device is little more than an altar to Therm, engraved with his fiery symbol. Use it to invoke therm's favor.",
                     size = new IntVec2(1, 1),
@@ -942,7 +1183,7 @@ namespace Ankh
                     rotatable = false,
                     graphicData = new GraphicData()
                     {
-                        texPath = "Therm",
+                        texPath = "SH_therm",
                         graphicClass = typeof(Graphic_Single),
                         shaderType = ShaderType.CutoutComplex,
                         drawSize = new Vector2(1, 1)
@@ -1008,6 +1249,516 @@ namespace Ankh
                 therm.designationCategory.ResolveReferences();
                 therm.designationCategory.PostLoad();
             }
+            {
+                ThingDef peg = new ThingDef()
+                {
+                    defName = "PEGActivator",
+                    thingClass = typeof(Buildings.Building_PEG),
+                    label = "PEG Activator",
+                    description = "This device is little more than an altar to Peg, engraved with her skully sign. It will defend the ones favored by peg.",
+                    size = new IntVec2(1, 1),
+                    passability = Traversability.PassThroughOnly,
+                    category = ThingCategory.Building,
+                    selectable = true,
+                    designationCategory = DesignationCategoryDefOf.Structure,
+                    useHitPoints = false,
+                    altitudeLayer = AltitudeLayer.Building,
+                    leaveResourcesWhenKilled = true,
+                    resourcesFractionWhenDeconstructed = 1,
+                    rotatable = false,
+                    graphicData = new GraphicData()
+                    {
+                        texPath = "SH_peg",
+                        graphicClass = typeof(Graphic_Single),
+                        shaderType = ShaderType.CutoutComplex,
+                        drawSize = new Vector2(1, 1)
+                    },
+                    statBases = new List<StatModifier>()
+                        {
+                            new StatModifier()
+                            {
+                                stat = StatDefOf.MaxHitPoints,
+                                value = 500
+                            },
+                            new StatModifier()
+                            {
+                                stat = StatDefOf.WorkToMake,
+                                value = 200
+                            },
+                            new StatModifier()
+                            {
+                                stat = StatDefOf.Flammability,
+                                value = 0
+                            },
+                            new StatModifier()
+                            {
+                                stat = StatDefOf.Beauty,
+                                value = 4
+                            }
+                        },
+                    costList = new List<ThingCountClass>()
+                    {
+                        //new ThingCountClass(ThingDefOf.ChunkSlagSteel, 2)
+                    },
+                    building = new BuildingProperties()
+                    {
+                        isInert = true,
+                        ignoreNeedsPower = true
+                    },
+                    minifiedDef = ThingDef.Named("MinifiedFurniture")
+                };
+                peg.blueprintDef = (ThingDef)typeof(ThingDefGenerator_Buildings).GetMethod("NewBlueprintDef_Thing", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, new object[] { peg, false, null });
+                peg.blueprintDef.ResolveReferences();
+                peg.blueprintDef.PostLoad();
+
+                ThingDef minifiedDef = (ThingDef)typeof(ThingDefGenerator_Buildings).GetMethod("NewBlueprintDef_Thing", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, new object[] { peg, true, peg.blueprintDef });
+                minifiedDef.ResolveReferences();
+                minifiedDef.PostLoad();
+
+                peg.frameDef = (ThingDef)typeof(ThingDefGenerator_Buildings).GetMethod("NewFrameDef_Thing", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, new object[] { peg });
+                peg.frameDef.ResolveReferences();
+                peg.frameDef.PostLoad();
+
+                peg.ResolveReferences();
+                peg.PostLoad();
+
+                shortHashGiver.Invoke(null, new object[] { peg });
+                shortHashGiver.Invoke(null, new object[] { minifiedDef });
+                shortHashGiver.Invoke(null, new object[] { peg.blueprintDef });
+                shortHashGiver.Invoke(null, new object[] { peg.frameDef });
+
+                DefDatabase<ThingDef>.Add(peg);
+                DefDatabase<ThingDef>.Add(minifiedDef);
+                DefDatabase<ThingDef>.Add(peg.blueprintDef);
+                DefDatabase<ThingDef>.Add(peg.frameDef);
+                peg.designationCategory.ResolveReferences();
+                peg.designationCategory.PostLoad();
+            }
+            {
+                ThingDef repo = new ThingDef()
+                {
+                    defName = "REPOActivator",
+                    thingClass = typeof(Buildings.Building_REPO),
+                    label = "REPO Activator",
+                    description = "This device is little more than an altar to Repo. Use it to restore.",
+                    size = new IntVec2(1, 1),
+                    passability = Traversability.PassThroughOnly,
+                    category = ThingCategory.Building,
+                    selectable = true,
+                    designationCategory = DesignationCategoryDefOf.Structure,
+                    useHitPoints = false,
+                    altitudeLayer = AltitudeLayer.Building,
+                    leaveResourcesWhenKilled = true,
+                    resourcesFractionWhenDeconstructed = 1,
+                    rotatable = false,
+                    graphicData = new GraphicData()
+                    {
+                        texPath = "SH_repo",
+                        graphicClass = typeof(Graphic_Single),
+                        shaderType = ShaderType.CutoutComplex,
+                        drawSize = new Vector2(1, 1)
+                    },
+                    statBases = new List<StatModifier>()
+                        {
+                            new StatModifier()
+                            {
+                                stat = StatDefOf.MaxHitPoints,
+                                value = 500
+                            },
+                            new StatModifier()
+                            {
+                                stat = StatDefOf.WorkToMake,
+                                value = 200
+                            },
+                            new StatModifier()
+                            {
+                                stat = StatDefOf.Flammability,
+                                value = 0
+                            },
+                            new StatModifier()
+                            {
+                                stat = StatDefOf.Beauty,
+                                value = 4
+                            }
+                        },
+                    costList = new List<ThingCountClass>()
+                    {
+                        //new ThingCountClass(ThingDefOf.ChunkSlagSteel, 2)
+                    },
+                    building = new BuildingProperties()
+                    {
+                        isInert = true,
+                        ignoreNeedsPower = true
+                    },
+                    minifiedDef = ThingDef.Named("MinifiedFurniture")
+                };
+                repo.blueprintDef = (ThingDef)typeof(ThingDefGenerator_Buildings).GetMethod("NewBlueprintDef_Thing", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, new object[] { repo, false, null });
+                repo.blueprintDef.ResolveReferences();
+                repo.blueprintDef.PostLoad();
+
+                ThingDef minifiedDef = (ThingDef)typeof(ThingDefGenerator_Buildings).GetMethod("NewBlueprintDef_Thing", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, new object[] { repo, true, repo.blueprintDef });
+                minifiedDef.ResolveReferences();
+                minifiedDef.PostLoad();
+
+                repo.frameDef = (ThingDef)typeof(ThingDefGenerator_Buildings).GetMethod("NewFrameDef_Thing", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, new object[] { repo });
+                repo.frameDef.ResolveReferences();
+                repo.frameDef.PostLoad();
+
+                repo.ResolveReferences();
+                repo.PostLoad();
+
+                shortHashGiver.Invoke(null, new object[] { repo });
+                shortHashGiver.Invoke(null, new object[] { minifiedDef });
+                shortHashGiver.Invoke(null, new object[] { repo.blueprintDef });
+                shortHashGiver.Invoke(null, new object[] { repo.frameDef });
+
+                DefDatabase<ThingDef>.Add(repo);
+                DefDatabase<ThingDef>.Add(minifiedDef);
+                DefDatabase<ThingDef>.Add(repo.blueprintDef);
+                DefDatabase<ThingDef>.Add(repo.frameDef);
+                repo.designationCategory.ResolveReferences();
+                repo.designationCategory.PostLoad();
+            }
+            {
+                ThingDef bob = new ThingDef()
+                {
+                    defName = "BOBActivator",
+                    thingClass = typeof(Buildings.Building_BOB),
+                    label = "BOB Activator",
+                    description = "This device is little more than an altar to Bob.",
+                    size = new IntVec2(1, 1),
+                    passability = Traversability.PassThroughOnly,
+                    category = ThingCategory.Building,
+                    selectable = true,
+                    designationCategory = DesignationCategoryDefOf.Structure,
+                    useHitPoints = false,
+                    altitudeLayer = AltitudeLayer.Building,
+                    leaveResourcesWhenKilled = true,
+                    resourcesFractionWhenDeconstructed = 1,
+                    rotatable = false,
+                    graphicData = new GraphicData()
+                    {
+                        texPath = "SH_bob",
+                        graphicClass = typeof(Graphic_Single),
+                        shaderType = ShaderType.CutoutComplex,
+                        drawSize = new Vector2(1, 1)
+                    },
+                    statBases = new List<StatModifier>()
+                        {
+                            new StatModifier()
+                            {
+                                stat = StatDefOf.MaxHitPoints,
+                                value = 500
+                            },
+                            new StatModifier()
+                            {
+                                stat = StatDefOf.WorkToMake,
+                                value = 200
+                            },
+                            new StatModifier()
+                            {
+                                stat = StatDefOf.Flammability,
+                                value = 0
+                            },
+                            new StatModifier()
+                            {
+                                stat = StatDefOf.Beauty,
+                                value = 4
+                            }
+                        },
+                    costList = new List<ThingCountClass>()
+                    {
+                        //new ThingCountClass(ThingDefOf.ChunkSlagSteel, 2)
+                    },
+                    building = new BuildingProperties()
+                    {
+                        isInert = true,
+                        ignoreNeedsPower = true
+                    },
+                    minifiedDef = ThingDef.Named("MinifiedFurniture")
+                };
+                bob.blueprintDef = (ThingDef)typeof(ThingDefGenerator_Buildings).GetMethod("NewBlueprintDef_Thing", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, new object[] { bob, false, null });
+                bob.blueprintDef.ResolveReferences();
+                bob.blueprintDef.PostLoad();
+
+                ThingDef minifiedDef = (ThingDef)typeof(ThingDefGenerator_Buildings).GetMethod("NewBlueprintDef_Thing", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, new object[] { bob, true, bob.blueprintDef });
+                minifiedDef.ResolveReferences();
+                minifiedDef.PostLoad();
+
+                bob.frameDef = (ThingDef)typeof(ThingDefGenerator_Buildings).GetMethod("NewFrameDef_Thing", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, new object[] { bob });
+                bob.frameDef.ResolveReferences();
+                bob.frameDef.PostLoad();
+
+                bob.ResolveReferences();
+                bob.PostLoad();
+
+                shortHashGiver.Invoke(null, new object[] { bob });
+                shortHashGiver.Invoke(null, new object[] { minifiedDef });
+                shortHashGiver.Invoke(null, new object[] { bob.blueprintDef });
+                shortHashGiver.Invoke(null, new object[] { bob.frameDef });
+
+                DefDatabase<ThingDef>.Add(bob);
+                DefDatabase<ThingDef>.Add(minifiedDef);
+                DefDatabase<ThingDef>.Add(bob.blueprintDef);
+                DefDatabase<ThingDef>.Add(bob.frameDef);
+                bob.designationCategory.ResolveReferences();
+                bob.designationCategory.PostLoad();
+            }
+            {
+                ThingDef rootsy = new ThingDef()
+                {
+                    defName = "ROOTSYActivator",
+                    thingClass = typeof(Buildings.Building_ROOTSY),
+                    label = "ROOTSY Activator",
+                    description = "This device is little more than an altar to Rootsy.",
+                    size = new IntVec2(1, 1),
+                    passability = Traversability.PassThroughOnly,
+                    category = ThingCategory.Building,
+                    selectable = true,
+                    designationCategory = DesignationCategoryDefOf.Structure,
+                    useHitPoints = false,
+                    altitudeLayer = AltitudeLayer.Building,
+                    leaveResourcesWhenKilled = true,
+                    resourcesFractionWhenDeconstructed = 1,
+                    rotatable = false,
+                    graphicData = new GraphicData()
+                    {
+                        texPath = "SH_rootsy",
+                        graphicClass = typeof(Graphic_Single),
+                        shaderType = ShaderType.CutoutComplex,
+                        drawSize = new Vector2(1, 1)
+                    },
+                    statBases = new List<StatModifier>()
+                        {
+                            new StatModifier()
+                            {
+                                stat = StatDefOf.MaxHitPoints,
+                                value = 500
+                            },
+                            new StatModifier()
+                            {
+                                stat = StatDefOf.WorkToMake,
+                                value = 200
+                            },
+                            new StatModifier()
+                            {
+                                stat = StatDefOf.Flammability,
+                                value = 0
+                            },
+                            new StatModifier()
+                            {
+                                stat = StatDefOf.Beauty,
+                                value = 4
+                            }
+                        },
+                    costList = new List<ThingCountClass>()
+                    {
+                        //new ThingCountClass(ThingDefOf.ChunkSlagSteel, 2)
+                    },
+                    building = new BuildingProperties()
+                    {
+                        isInert = true,
+                        ignoreNeedsPower = true
+                    },
+                    minifiedDef = ThingDef.Named("MinifiedFurniture")
+                };
+                rootsy.blueprintDef = (ThingDef)typeof(ThingDefGenerator_Buildings).GetMethod("NewBlueprintDef_Thing", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, new object[] { rootsy, false, null });
+                rootsy.blueprintDef.ResolveReferences();
+                rootsy.blueprintDef.PostLoad();
+
+                ThingDef minifiedDef = (ThingDef)typeof(ThingDefGenerator_Buildings).GetMethod("NewBlueprintDef_Thing", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, new object[] { rootsy, true, rootsy.blueprintDef });
+                minifiedDef.ResolveReferences();
+                minifiedDef.PostLoad();
+
+                rootsy.frameDef = (ThingDef)typeof(ThingDefGenerator_Buildings).GetMethod("NewFrameDef_Thing", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, new object[] { rootsy });
+                rootsy.frameDef.ResolveReferences();
+                rootsy.frameDef.PostLoad();
+
+                rootsy.ResolveReferences();
+                rootsy.PostLoad();
+
+                shortHashGiver.Invoke(null, new object[] { rootsy });
+                shortHashGiver.Invoke(null, new object[] { minifiedDef });
+                shortHashGiver.Invoke(null, new object[] { rootsy.blueprintDef });
+                shortHashGiver.Invoke(null, new object[] { rootsy.frameDef });
+
+                DefDatabase<ThingDef>.Add(rootsy);
+                DefDatabase<ThingDef>.Add(minifiedDef);
+                DefDatabase<ThingDef>.Add(rootsy.blueprintDef);
+                DefDatabase<ThingDef>.Add(rootsy.frameDef);
+                rootsy.designationCategory.ResolveReferences();
+                rootsy.designationCategory.PostLoad();
+            }
+            {
+                ThingDef humour = new ThingDef()
+                {
+                    defName = "HUMOURActivator",
+                    thingClass = typeof(Buildings.Building_HUMOUR),
+                    label = "HUMOUR Activator",
+                    description = "This device is little more than an altar to Humour.",
+                    size = new IntVec2(1, 1),
+                    passability = Traversability.PassThroughOnly,
+                    category = ThingCategory.Building,
+                    selectable = true,
+                    designationCategory = DesignationCategoryDefOf.Structure,
+                    useHitPoints = false,
+                    altitudeLayer = AltitudeLayer.Building,
+                    leaveResourcesWhenKilled = true,
+                    resourcesFractionWhenDeconstructed = 1,
+                    rotatable = false,
+                    graphicData = new GraphicData()
+                    {
+                        texPath = "SH_humour",
+                        graphicClass = typeof(Graphic_Single),
+                        shaderType = ShaderType.CutoutComplex,
+                        drawSize = new Vector2(1, 1)
+                    },
+                    statBases = new List<StatModifier>()
+                        {
+                            new StatModifier()
+                            {
+                                stat = StatDefOf.MaxHitPoints,
+                                value = 500
+                            },
+                            new StatModifier()
+                            {
+                                stat = StatDefOf.WorkToMake,
+                                value = 200
+                            },
+                            new StatModifier()
+                            {
+                                stat = StatDefOf.Flammability,
+                                value = 0
+                            },
+                            new StatModifier()
+                            {
+                                stat = StatDefOf.Beauty,
+                                value = 4
+                            }
+                        },
+                    costList = new List<ThingCountClass>()
+                    {
+                        //new ThingCountClass(ThingDefOf.ChunkSlagSteel, 2)
+                    },
+                    building = new BuildingProperties()
+                    {
+                        isInert = true,
+                        ignoreNeedsPower = true
+                    },
+                    minifiedDef = ThingDef.Named("MinifiedFurniture")
+                };
+                humour.blueprintDef = (ThingDef)typeof(ThingDefGenerator_Buildings).GetMethod("NewBlueprintDef_Thing", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, new object[] { humour, false, null });
+                humour.blueprintDef.ResolveReferences();
+                humour.blueprintDef.PostLoad();
+
+                ThingDef minifiedDef = (ThingDef)typeof(ThingDefGenerator_Buildings).GetMethod("NewBlueprintDef_Thing", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, new object[] { humour, true, humour.blueprintDef });
+                minifiedDef.ResolveReferences();
+                minifiedDef.PostLoad();
+
+                humour.frameDef = (ThingDef)typeof(ThingDefGenerator_Buildings).GetMethod("NewFrameDef_Thing", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, new object[] { humour });
+                humour.frameDef.ResolveReferences();
+                humour.frameDef.PostLoad();
+
+                humour.ResolveReferences();
+                humour.PostLoad();
+
+                shortHashGiver.Invoke(null, new object[] { humour });
+                shortHashGiver.Invoke(null, new object[] { minifiedDef });
+                shortHashGiver.Invoke(null, new object[] { humour.blueprintDef });
+                shortHashGiver.Invoke(null, new object[] { humour.frameDef });
+
+                DefDatabase<ThingDef>.Add(humour);
+                DefDatabase<ThingDef>.Add(minifiedDef);
+                DefDatabase<ThingDef>.Add(humour.blueprintDef);
+                DefDatabase<ThingDef>.Add(humour.frameDef);
+                humour.designationCategory.ResolveReferences();
+                humour.designationCategory.PostLoad();
+            }
+            {
+                ThingDef dorf = new ThingDef()
+                {
+                    defName = "DORFActivator",
+                    thingClass = typeof(Buildings.Building_DORF),
+                    label = "DORF Activator",
+                    description = "This device is little more than an altar to Dorf.",
+                    size = new IntVec2(1, 1),
+                    passability = Traversability.PassThroughOnly,
+                    category = ThingCategory.Building,
+                    selectable = true,
+                    designationCategory = DesignationCategoryDefOf.Structure,
+                    useHitPoints = false,
+                    altitudeLayer = AltitudeLayer.Building,
+                    leaveResourcesWhenKilled = true,
+                    resourcesFractionWhenDeconstructed = 1,
+                    rotatable = false,
+                    graphicData = new GraphicData()
+                    {
+                        texPath = "SH_dorf",
+                        graphicClass = typeof(Graphic_Single),
+                        shaderType = ShaderType.CutoutComplex,
+                        drawSize = new Vector2(1, 1)
+                    },
+                    statBases = new List<StatModifier>()
+                        {
+                            new StatModifier()
+                            {
+                                stat = StatDefOf.MaxHitPoints,
+                                value = 500
+                            },
+                            new StatModifier()
+                            {
+                                stat = StatDefOf.WorkToMake,
+                                value = 200
+                            },
+                            new StatModifier()
+                            {
+                                stat = StatDefOf.Flammability,
+                                value = 0
+                            },
+                            new StatModifier()
+                            {
+                                stat = StatDefOf.Beauty,
+                                value = 4
+                            }
+                        },
+                    costList = new List<ThingCountClass>()
+                    {
+                        //new ThingCountClass(ThingDefOf.ChunkSlagSteel, 2)
+                    },
+                    building = new BuildingProperties()
+                    {
+                        isInert = true,
+                        ignoreNeedsPower = true
+                    },
+                    minifiedDef = ThingDef.Named("MinifiedFurniture")
+                };
+                dorf.blueprintDef = (ThingDef)typeof(ThingDefGenerator_Buildings).GetMethod("NewBlueprintDef_Thing", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, new object[] { dorf, false, null });
+                dorf.blueprintDef.ResolveReferences();
+                dorf.blueprintDef.PostLoad();
+
+                ThingDef minifiedDef = (ThingDef)typeof(ThingDefGenerator_Buildings).GetMethod("NewBlueprintDef_Thing", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, new object[] { dorf, true, dorf.blueprintDef });
+                minifiedDef.ResolveReferences();
+                minifiedDef.PostLoad();
+
+                dorf.frameDef = (ThingDef)typeof(ThingDefGenerator_Buildings).GetMethod("NewFrameDef_Thing", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, new object[] { dorf });
+                dorf.frameDef.ResolveReferences();
+                dorf.frameDef.PostLoad();
+
+                dorf.ResolveReferences();
+                dorf.PostLoad();
+
+                shortHashGiver.Invoke(null, new object[] { dorf });
+                shortHashGiver.Invoke(null, new object[] { minifiedDef });
+                shortHashGiver.Invoke(null, new object[] { dorf.blueprintDef });
+                shortHashGiver.Invoke(null, new object[] { dorf.frameDef });
+
+                DefDatabase<ThingDef>.Add(dorf);
+                DefDatabase<ThingDef>.Add(minifiedDef);
+                DefDatabase<ThingDef>.Add(dorf.blueprintDef);
+                DefDatabase<ThingDef>.Add(dorf.frameDef);
+                dorf.designationCategory.ResolveReferences();
+                dorf.designationCategory.PostLoad();
+            }
             #endregion
             #region Thoughts
             {
@@ -1023,7 +1774,7 @@ namespace Ankh
                         {
                             label = "Fnargh's wrath",
                             description = "Fnargh's presence in my mind is like a thousand writhing insects.",
-                            baseMoodEffect = -10f
+                            baseMoodEffect = -20f
                         }
                     }
                 };
@@ -1045,7 +1796,7 @@ namespace Ankh
                         {
                             label = "Fnargh's favor",
                             description = "Fnargh's presence in my mind soothes me. Everything seems just a little bit better.",
-                            baseMoodEffect = 10f
+                            baseMoodEffect = 20f
                         }
                     }
                 };
@@ -1058,7 +1809,8 @@ namespace Ankh
             #endregion
         }
 
-        private static void SendWrathLetter(string name, bool possessive, GlobalTargetInfo info) => Find.LetterStack.ReceiveLetter("wrath of " + name, name + " died, prepare to meet " + (possessive ? "his" : "her") + " wrath", LetterType.BadUrgent, info);
+        private static void SendWrathLetter(string name, bool possessive, GlobalTargetInfo info) => 
+            Find.LetterStack.ReceiveLetter("wrath of " + name, name + " died, prepare to meet " + (possessive ? "his" : "her") + " wrath", LetterType.BadUrgent, info);
 
         private static List<string> ReadFileAndFetchStrings(string file)
         {
@@ -1089,7 +1841,7 @@ namespace Ankh
             }
         }
 
-        public void WaitAndExecute(Action action) => StartCoroutine("WaitAndExecuteCoroutine", action);
+        public void WaitAndExecute(Action action) => StartCoroutine(WaitAndExecuteCoroutine(action));
 
         public IEnumerator WaitAndExecuteCoroutine(Action action)
         {

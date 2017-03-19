@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Serialization;
-using Verse;
 
 namespace Ankh
 {
@@ -14,7 +12,7 @@ namespace Ankh
         [XmlIgnore]
         public Dictionary<int, List<string[]>> scheduler;
         public List<string> deadWraths;
-
+        public int lastTickTick;
 
         public SerializeableKeyValue<int, List<string[]>>[] SchedulerSerialized
         {
