@@ -398,8 +398,8 @@ namespace Ankh
                                 pawns.RemoveAll(x => x.NameStringShort.EqualsIgnoreCase("Serpenthalis"));
 
 
-
                             Pawn p = pawns.Where(((Pawn pawn) => pawn.Map.roofGrid.RoofAt(pawn.Position) != RoofDefOf.RoofRockThick)).RandomElement();
+
                             p.Map.weatherManager.eventHandler.AddEvent(new WeatherEvent_LightningStrike(p.Map, p.Position));
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("zap's wrath",
@@ -466,7 +466,7 @@ namespace Ankh
                         }
                         else
                         {
-                            for(int i=0; i<2; i++)
+                            for(int i=0; i<3; i++)
                             {
                                 Map map = Find.AnyPlayerHomeMap;
                                 if (!map.areaManager.Home.ActiveCells.Where(iv => iv.Standable(map)).TryRandomElement( out IntVec3 position))
@@ -843,9 +843,14 @@ namespace Ankh
                                 }
                                 lord.AddPawn(newPawn);
                             }
-                            newPawn.DeSpawn();
-
-                            TradeUtility.SpawnDropPod(position, map, newPawn);
+                            if(position.Roofed(map))
+                            {
+                                newPawn.DeSpawn();
+                                TradeUtility.SpawnDropPod(position, map, newPawn);
+                            } else
+                            {
+                                MoteMaker.ThrowMetaPuffs(CellRect.CenteredOn(position, 10), map);
+                            }
 
 
                             if (letter)
