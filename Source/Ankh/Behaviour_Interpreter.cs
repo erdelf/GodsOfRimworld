@@ -970,7 +970,7 @@ namespace Ankh
                     }
                 },
                 {
-                    "dick",
+                    "downward_dick",
                     delegate(bool favor, bool letter)
                     {
                         if(favor)
@@ -988,7 +988,7 @@ namespace Ankh
                                 faction = Find.FactionManager.FirstFactionOfDef(FactionDefOf.SpacerHostile),
                                 raidStrategy = RaidStrategyDefOf.ImmediateAttack,
                                 raidArrivalMode = PawnsArriveMode.CenterDrop,
-                                raidPodOpenDelay = 50,
+                                raidPodOpenDelay = GenDate.TicksPerHour/2,
                                 spawnCenter = map.listerBuildings.ColonistsHaveBuildingWithPowerOn(ThingDefOf.OrbitalTradeBeacon) ? DropCellFinder.TradeDropSpot(map) : RCellFinder.TryFindRandomSpotJustOutsideColony(map.IsPlayerHome ? map.mapPawns.FreeColonists.RandomElement().Position : CellFinder.RandomCell(map), map, out IntVec3 spawnPoint) ? spawnPoint : CellFinder.RandomCell(map),
                                 generateFightersOnly = true,
                                 forced = true,
@@ -1010,6 +1010,9 @@ namespace Ankh
                                 raidStrategy = parms.raidStrategy
                             }).ToList();
 
+                            IEnumerable<RecipeDef> recipes = DefDatabase<RecipeDef>.AllDefsListForReading.Where(rd => (rd.addsHediff?.addedPartProps?.isBionic ?? false) && 
+                            (rd?.fixedIngredientFilter?.AllowedThingDefs.Any(td => td.techHediffsTags?.Contains("Advanced") ?? false) ?? false) && !rd.appliedOnFixedBodyParts.NullOrEmpty());
+
                             for(int i = 0; i<pawns.Count;i++)
                             {
                                 Pawn colonist = colonists[i];
@@ -1020,13 +1023,56 @@ namespace Ankh
                                 pawn.story.childhood = colonist.story.childhood;
                                 pawn.story.adulthood = colonist.story.adulthood;
                                 pawn.skills.skills = colonist.skills.skills;
-                                pawn.health.hediffSet.hediffs = colonist.health.hediffSet.hediffs;
+                                pawn.health.hediffSet.hediffs = colonist.health.hediffSet.hediffs.ListFullCopy();
+                                pawn.story.bodyType = colonist.story.bodyType;
+                                typeof(Pawn_StoryTracker).GetField("headGraphicPath", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(pawn.story, colonist.story.HeadGraphicPath);
+                                FieldInfo recordInfo = typeof(Pawn_RecordsTracker).GetField("records", BindingFlags.NonPublic | BindingFlags.Instance);
+                                recordInfo.SetValue(pawn.records, recordInfo.GetValue(colonist.records));
+                                pawn.gender = colonist.gender;
+                                pawn.story.hairDef = colonist.story.hairDef;
+                                pawn.story.hairColor = colonist.story.hairColor;
+                                pawn.apparel.DestroyAll();
+
+                                colonist.apparel.WornApparel.ForEach(ap =>
+                                {
+                                    Apparel copy = ThingMaker.MakeThing(ap.def, ap.Stuff) as Apparel;
+                                    copy.TryGetComp<CompQuality>().SetQuality(ap.TryGetComp<CompQuality>().Quality, ArtGenerationContext.Colony);
+                                    pawn.apparel.Wear(copy);
+                                });
+                                
+                                foreach(FieldInfo fi in typeof(Pawn_AgeTracker).GetFields(BindingFlags.NonPublic | BindingFlags.Instance))
+                                    if(!fi.Name.EqualsIgnoreCase("pawn"))
+                                        fi.SetValue(pawn.ageTracker, fi.GetValue(colonist.ageTracker));
+
+                                pawn.story.melanin = colonist.story.melanin;
+
+                                RecipeDef recipe = null;
+                                for(int x = 0; x<5; x++)
+                                {
+                                    recipes.Where(rd => rd != recipe).TryRandomElement(out recipe);
+                                    BodyPartRecord record;
+                                    do
+                                    {
+                                        record = pawn.health.hediffSet.GetRandomNotMissingPart(DamageDefOf.Bullet);
+                                    } while(recipe.appliedOnFixedBodyParts?.Contains(record.def) ?? false);
+                                    recipe.Worker.ApplyOnPawn(pawn, record, null, recipe.fixedIngredientFilter.AllowedThingDefs.Select(td => ThingMaker.MakeThing(td, td.MadeFromStuff ? GenStuff.DefaultStuffFor(td) : null)).ToList());
+                                }
+                                pawn.equipment.DestroyAllEquipment();
+                                ThingDef weaponDef = new ThingDef[] { ThingDef.Named("Gun_AssaultRifle"), ThingDef.Named("Gun_ChargeRifle"), ThingDef.Named("MeleeWeapon_LongSword") }.RandomElement();
+                                ThingWithComps weapon = ThingMaker.MakeThing(weaponDef, weaponDef.MadeFromStuff ? ThingDefOf.Plasteel : null) as ThingWithComps;
+                                weapon.TryGetComp<CompQuality>().SetQuality(Rand.Bool ? QualityCategory.Normal : Rand.Bool ? QualityCategory.Good : QualityCategory.Superior, ArtGenerationContext.Colony);
+                                pawn.equipment.AddEquipment(weapon);
                             }
-                            
 
                             DropPodUtility.DropThingsNear(parms.spawnCenter, map, pawns.Cast<Thing>(), parms.raidPodOpenDelay, false, true, true);
                             Lord lord = LordMaker.MakeNewLord(parms.faction, parms.raidStrategy.Worker.MakeLordJob(parms, map), map, pawns);
                             AvoidGridMaker.RegenerateAvoidGridsFor(parms.faction, map);
+
+                            MoteMaker.ThrowMetaPuffs(CellRect.CenteredOn(parms.spawnCenter, 10), map);
+
+                            if(letter)
+                                Find.LetterStack.ReceiveLetter("dick's wrath",
+                                    "The god of dicks is angry at your colony.", LetterType.BadUrgent, new GlobalTargetInfo(parms.spawnCenter, map));
                         }
                     }
                 }
