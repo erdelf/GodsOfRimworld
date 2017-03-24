@@ -975,7 +975,14 @@ namespace Ankh
                     {
                         if(favor)
                         {
-
+                            IEnumerable<TraitDef> traits = DefDatabase<TraitDef>.AllDefsListForReading.Where(td => td.defName.StartsWith("Ankh"));
+                            Find.ColonistBar.GetColonistsInOrder().Where((Pawn x) => !x.Dead).ToList().ForEach(p =>
+                            {
+                                p.story.traits.GainTrait(new Trait(traits.RandomElement(), 0, true));
+                            });
+                            if (letter)
+                                Find.LetterStack.ReceiveLetter("dick's favor",
+                                    "The god of dicks shows mercy on your colony.", LetterType.Good);
                         } else
                         {
                             Map map = Find.AnyPlayerHomeMap;
@@ -1857,6 +1864,117 @@ namespace Ankh
                 DefDatabase<ThoughtDef>.Add(fnarghFavor);
             }
 
+            #endregion
+            #region Traits
+            {
+                TraitDef thrustsOfVeneration = new TraitDef()
+                {
+                    defName = "AnkhThrustsOfVeneration",
+                    label = "Ucefzach's Lubricious Thrusts of Veneration",
+                    description = "whatever, pladd, tell me something",
+                    degreeDatas = new List<TraitDegreeData>()
+                    {
+                        new TraitDegreeData()
+                        {
+                            label = "Ucefzach's Lubricious Thrusts of Veneration",
+                            description = "whatever, pladd tell me something",
+                            statOffsets = new List<StatModifier>()
+                            {
+                                new StatModifier()
+                                {
+                                    stat = StatDefOf.MeleeHitChance,
+                                    value = 1.5f
+                                },
+                                new StatModifier()
+                                {
+                                    stat = StatDefOf.AimingDelayFactor,
+                                    value = 0.5f
+                                }
+                            }
+                        }
+                    }
+                };
+                thrustsOfVeneration.ResolveReferences();
+                thrustsOfVeneration.PostLoad();
+                shortHashGiver.Invoke(null, new object[] { thrustsOfVeneration });
+                DefDatabase<TraitDef>.Add(thrustsOfVeneration);
+            }
+            {
+                TraitDef armoredTouch = new TraitDef()
+                {
+                    defName = "AnkhArmoredTouch",
+                    label = "Southpond's En-Armored Touch",
+                    description = "whatever, pladd, tell me something",
+                    degreeDatas = new List<TraitDegreeData>()
+                    {
+                        new TraitDegreeData()
+                        {
+                            label = "Southpond's En-Armored Touch",
+                            description = "whatever, pladd tell me something",
+                            statOffsets = new List<StatModifier>()
+                            {
+                                new StatModifier()
+                                {
+                                    stat = StatDefOf.ArmorRating_Blunt,
+                                    value = 1.5f
+                                },
+                                new StatModifier()
+                                {
+                                    stat = StatDefOf.ArmorRating_Electric,
+                                    value = 1.5f
+                                },
+                                new StatModifier()
+                                {
+                                    stat = StatDefOf.ArmorRating_Heat,
+                                    value = 1.5f
+                                },
+                                new StatModifier()
+                                {
+                                    stat = StatDefOf.ArmorRating_Sharp,
+                                    value = 1.5f
+                                }
+                            }
+                        }
+                    }
+                };
+                armoredTouch.ResolveReferences();
+                armoredTouch.PostLoad();
+                shortHashGiver.Invoke(null, new object[] { armoredTouch });
+                DefDatabase<TraitDef>.Add(armoredTouch);
+            }
+            {
+                TraitDef teaAndScones = new TraitDef()
+                {
+                    defName = "AnkhTeaAndScones",
+                    label = "maebak's tea and scones",
+                    description = "whatever, pladd, tell me something",
+                    degreeDatas = new List<TraitDegreeData>()
+                    {
+                        new TraitDegreeData()
+                        {
+                            label = "maebak's tea and scones",
+                            description = "whatever, pladd tell me something",
+                            statOffsets = new List<StatModifier>()
+                            {
+                                new StatModifier()
+                                {
+                                    stat = StatDefOf.ImmunityGainSpeed,
+                                    value = 1.5f
+                                },
+                                new StatModifier()
+                                {
+                                    stat = StatDefOf.HealingSpeed,
+                                    value = 5f
+                                }
+                            }
+                        }
+                    }
+                };
+                teaAndScones.ResolveReferences();
+                teaAndScones.PostLoad();
+                shortHashGiver.Invoke(null, new object[] { teaAndScones });
+                DefDatabase<TraitDef>.Add(teaAndScones);
+            }
             #endregion
         }
 
