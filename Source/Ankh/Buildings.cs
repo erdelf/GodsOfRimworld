@@ -298,9 +298,6 @@ namespace Ankh
                             if (recipe == null)
                                 return;
 
-                            Log.Message(record.ToString() + "\n" + record.def.defName);
-                            Log.Message(recipe.defName + "\n" + string.Join("|", recipe.appliedOnFixedBodyParts.Select(bpd => bpd.defName).ToArray()));
-
                             recipe.Worker.ApplyOnPawn(p, record, null, recipe.fixedIngredientFilter.AllowedThingDefs.Select(td => ThingMaker.MakeThing(td, td.MadeFromStuff ? GenStuff.DefaultStuffFor(td) : null)).ToList());
 
                             Behaviour_Interpreter.staticVariables.repoCount--;
