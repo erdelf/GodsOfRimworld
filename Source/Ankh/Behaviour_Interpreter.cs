@@ -1020,6 +1020,8 @@ namespace Ankh
                             IEnumerable<RecipeDef> recipes = DefDatabase<RecipeDef>.AllDefsListForReading.Where(rd => (rd.addsHediff?.addedPartProps?.isBionic ?? false) && 
                             (rd?.fixedIngredientFilter?.AllowedThingDefs.Any(td => td.techHediffsTags?.Contains("Advanced") ?? false) ?? false) && !rd.appliedOnFixedBodyParts.NullOrEmpty());
 
+                            IEnumerable<TraitDef> traits = DefDatabase<TraitDef>.AllDefsListForReading.Where(td => td.defName.StartsWith("Ankh"));
+
                             for(int i = 0; i<pawns.Count;i++)
                             {
                                 Pawn colonist = colonists[i];
@@ -1069,6 +1071,7 @@ namespace Ankh
                                 ThingWithComps weapon = ThingMaker.MakeThing(weaponDef, weaponDef.MadeFromStuff ? ThingDefOf.Plasteel : null) as ThingWithComps;
                                 weapon.TryGetComp<CompQuality>().SetQuality(Rand.Bool ? QualityCategory.Normal : Rand.Bool ? QualityCategory.Good : QualityCategory.Superior, ArtGenerationContext.Colony);
                                 pawn.equipment.AddEquipment(weapon);
+                                pawn.story.traits.GainTrait(new Trait(traits.RandomElement(), 0, true));
                             }
 
                             DropPodUtility.DropThingsNear(parms.spawnCenter, map, pawns.Cast<Thing>(), parms.raidPodOpenDelay, false, true, true);
