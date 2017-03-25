@@ -329,27 +329,5 @@ namespace Ankh
                 return false;
             }
         }
-        /*
-        public class Sacrifice : IncidentWorker
-        {
-            protected override bool CanFireNowSub(IIncidentTarget target)
-            {
-                return base.CanFireNowSub(target);
-            }
-
-            public override bool TryExecute(IncidentParms parms)
-            {
-                Map map = ((Map)parms.target);
-
-                IntVec3 point;
-
-                if (RCellFinder.TryFindRandomSpotJustOutsideColony(CellFinder.RandomCell(map), map, map.mapPawns.AllPawnsSpawned.RandomElement(), out point, (IntVec3 c) => GenAdj.CellsOccupiedBy(c, Rot4.North, new IntVec2(2, 2)).ToList().TrueForAll(x => x.Standable(map))))
-                {
-                    ZoneMaker.MakeZoneWithCells(new Ankh.Sacrifice.Zone_Sacrifice(map.zoneManager, "zap"), GenAdj.CellsOccupiedBy(point, Rot4.North, new IntVec2(2, 2)));
-                    return true;
-                }
-                return false;
-            }
-        }*/
     }
 }
