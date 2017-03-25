@@ -162,7 +162,7 @@ namespace Ankh
                                 this.instanceVariableHolder.deadWraths.Add(p.NameStringShort);
                                 if (Rand.Value > 0.3)
                                 {
-                                    int scheduledFor = Mathf.RoundToInt(UnityEngine.Random.Range(0.0f, (float)GenDate.DaysPerMonth) * GenDate.TicksPerDay);
+                                    int scheduledFor = Mathf.RoundToInt(UnityEngine.Random.Range(0.0f, (float)GenDate.DaysPerSeason) * GenDate.TicksPerDay);
                                     AddToScheduler(scheduledFor, "wrathCall", p.NameStringShort, p.gender.ToString());
                                     Log.Message("Scheduled " + p.NameStringShort + "s wrath. Will happen in " + GenDate.TicksToDays(scheduledFor).ToString() + " days");
                                 }
@@ -190,6 +190,13 @@ namespace Ankh
                                         this.instanceVariableHolder.scheduler.Remove(i);
                                     }
                                 });
+                                Find.ColonistBar.GetColonistsInOrder().ForEach(p =>
+                                {
+                                    if (p.story.traits.HasTrait(AnkhDefs.coneOfShame) && !p.health.hediffSet.HasHediff(AnkhDefs.coneOfShameHediff))
+                                        p.health.hediffSet.AddDirect(HediffMaker.MakeHediff(AnkhDefs.coneOfShameHediff, p));
+                                    if (p.story.traits.HasTrait(AnkhDefs.fiveKnuckleShuffle) && !p.health.hediffSet.HasHediff(AnkhDefs.fiveKnuckleShuffleHediff))
+                                        p.health.hediffSet.AddDirect(HediffMaker.MakeHediff(AnkhDefs.fiveKnuckleShuffleHediff, p));
+                                });
                             });
                         }
                         if ((Find.TickManager.TicksGame / (GenDate.TicksPerMonth) > this.instanceVariableHolder.lastTickTick / (GenDate.TicksPerMonth)) && Find.TickManager.TicksGame > 0)
@@ -213,7 +220,7 @@ namespace Ankh
                                             bool favor = split[1].ToLower().Equals("favor");
                                             if (int.TryParse(split[3], out int points) && int.TryParse(split[4], out int cost))
                                                 if (points >= cost || split[0].EqualsIgnoreCase("itspladd") || split[0].EqualsIgnoreCase("erdelf") || (split[0].EqualsIgnoreCase("serphentalis") && points >= cost/2 ))
-                                                    AddToScheduler(favor || Find.TickManager.TicksGame > GenDate.TicksPerDay * 3 ? 1 : GenDate.TicksPerDay * 3 - Find.TickManager.TicksGame, "callTheGods", split[2].ToLower(), favor.ToString(), true.ToString());
+                                                    AddToScheduler(/*favor || Find.TickManager.TicksGame > GenDate.TicksPerDay * 3 ? 1 : GenDate.TicksPerDay * 3 - Find.TickManager.TicksGame*/ 1, "callTheGods", split[2].ToLower(), favor.ToString(), true.ToString());
                                         }
                                     }
                                 );
@@ -303,7 +310,7 @@ namespace Ankh
                     {
                         AddToScheduler(250+i*50, "callTheGods", gods.Keys.RandomElement(), true.ToString(), true.ToString());
                     }
-                    IncidentDef.Named("MiracleHeal").Worker.TryExecute(null);
+                    AnkhDefs.miracleHeal.Worker.TryExecute(null);
                 }
             };
 
@@ -368,7 +375,7 @@ namespace Ankh
 
             wrathActions.Add((s, b) =>
             {
-                Find.AnyPlayerHomeMap.mapConditionManager.RegisterCondition(MapConditionMaker.MakeCondition(MapConditionDef.Named("wrathConditionDef"), GenDate.TicksPerDay * 1, 0));
+                Find.AnyPlayerHomeMap.mapConditionManager.RegisterCondition(MapConditionMaker.MakeCondition(AnkhDefs.wrathCondition, GenDate.TicksPerDay * 1, 0));
                 SendWrathLetter(s, b, GlobalTargetInfo.Invalid);
             });
         }
@@ -383,7 +390,7 @@ namespace Ankh
                         {
                             staticVariables.zapCount++;
 
-                            List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(ThingDef.Named("ZAPActivator"))).ToList();
+                            List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(AnkhDefs.zapActivator)).ToList();
 
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("zap's favor",
@@ -457,7 +464,7 @@ namespace Ankh
                         {
                             staticVariables.pegCount++;
 
-                            ThingDef peg = ThingDef.Named("PEGActivator");
+                            ThingDef peg = AnkhDefs.pegActivator;
                             List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(peg)).ToList();
 
                             if (letter)
@@ -486,7 +493,7 @@ namespace Ankh
                         if (favor)
                         {
                             staticVariables.repoCount++;
-                            ThingDef peg = ThingDef.Named("REPOActivator");
+                            ThingDef peg = AnkhDefs.repoActivator;
                             List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(peg)).ToList();
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("repo's favor",
@@ -538,7 +545,7 @@ namespace Ankh
                         if(favor)
                         {
                             staticVariables.bobCount++;
-                            ThingDef peg = ThingDef.Named("BOBActivator");
+                            ThingDef peg = AnkhDefs.bobActivator;
                             List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(peg)).ToList();
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("bob's favor",
@@ -572,7 +579,7 @@ namespace Ankh
                         if(favor)
                         {
                             staticVariables.rootsyCount++;
-                            ThingDef peg = ThingDef.Named("ROOTSYActivator");
+                            ThingDef peg = AnkhDefs.rootsyActivator;
                             List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(peg)).ToList();
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("rootsy's favor",
@@ -742,7 +749,7 @@ namespace Ankh
                              Pawn p = Find.ColonistBar?.GetColonistsInOrder()?.Where((Pawn x) => !x.Dead && !x.Downed && !x.mindState.mentalStateHandler.InMentalState && !x.jobs.curDriver.asleep).RandomElement();
                              if (p != null)
                              {
-                                 p.needs.mood.thoughts.memories.TryGainMemoryThought(ThoughtDef.Named("FnarghFavor"));
+                                 p.needs.mood.thoughts.memories.TryGainMemoryThought(AnkhDefs.fnarghFavor);
                                  if (letter)
                                      Find.LetterStack.ReceiveLetter("fnargh's favor",
                                           "The god fnargh shows mercy on your colony. He commands the web of thought to make " + p.NameStringShort + " happy", LetterType.Good, p);
@@ -760,8 +767,8 @@ namespace Ankh
                              Pawn p = pawns.RandomElement();
                              if (p != null)
                              {
-                                 p.needs.mood.thoughts.memories.TryGainMemoryThought(ThoughtDef.Named("FnarghWrath"));
-                                 p.mindState.mentalStateHandler.TryStartMentalState(DefDatabase<MentalStateDef>.AllDefs.Where(msd => !msd.defName.EqualsIgnoreCase("PanicFlee") && !msd.defName.EqualsIgnoreCase("GiveUpExit") && msd.Worker.GetType().GetField("otherPawn") == null).RandomElement(), "Fnargh's wrath", true, true);
+                                 p.needs.mood.thoughts.memories.TryGainMemoryThought(AnkhDefs.fnarghWrath);
+                                 p.mindState.mentalStateHandler.TryStartMentalState(DefDatabase<MentalStateDef>.AllDefs.Where(msd => !msd.defName.EqualsIgnoreCase("PanicFlee") && !msd.defName.EqualsIgnoreCase("GiveUpExit") && msd.Worker.GetType().GetField("otherPawn", (BindingFlags) 60) == null).RandomElement(), "Fnargh's wrath", true, true);
                                  if (letter)
                                      Find.LetterStack.ReceiveLetter("fnargh's wrath",
                                          "The god fnargh is angry at your colony. He commands the web of thought to make " + p.NameStringShort + " mad", LetterType.BadNonUrgent, p);
@@ -779,7 +786,7 @@ namespace Ankh
                         {
                             staticVariables.thermCount++;
 
-                            List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(ThingDef.Named("THERMActivator"))).ToList();
+                            List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(AnkhDefs.thermActivator)).ToList();
 
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("therm's favor",
@@ -867,7 +874,7 @@ namespace Ankh
                         {
                             staticVariables.humourCount++;
 
-                            List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(ThingDef.Named("HUMOURActivator"))).ToList();
+                            List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(AnkhDefs.humourActivator)).ToList();
 
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("humour's favor",
@@ -944,7 +951,7 @@ namespace Ankh
                         {
                             staticVariables.dorfCount++;
 
-                            List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(ThingDef.Named("DORFActivator"))).ToList();
+                            List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(AnkhDefs.dorfActivator)).ToList();
 
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("dorf's favor",
@@ -975,10 +982,16 @@ namespace Ankh
                     {
                         if(favor)
                         {
-                            IEnumerable<TraitDef> traits = DefDatabase<TraitDef>.AllDefsListForReading.Where(td => td.defName.StartsWith("Ankh"));
                             Find.ColonistBar.GetColonistsInOrder().Where((Pawn x) => !x.Dead).ToList().ForEach(p =>
                             {
-                                p.story.traits.GainTrait(new Trait(traits.RandomElement(), 0, true));
+                                Trait trait = null;
+                                do
+                                {
+                                    trait = new Trait(AnkhDefs.ankhTraits.RandomElement(), 0, true);
+                                    p.story.traits.GainTrait(trait);
+                                }while (!p.story.traits.allTraits.Contains(trait));
+                                p.story.traits.allTraits.Remove(trait);
+                                p.story.traits.allTraits.Insert(0, trait);
                             });
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("dick's favor",
@@ -1019,8 +1032,6 @@ namespace Ankh
 
                             IEnumerable<RecipeDef> recipes = DefDatabase<RecipeDef>.AllDefsListForReading.Where(rd => (rd.addsHediff?.addedPartProps?.isBionic ?? false) && 
                             (rd?.fixedIngredientFilter?.AllowedThingDefs.Any(td => td.techHediffsTags?.Contains("Advanced") ?? false) ?? false) && !rd.appliedOnFixedBodyParts.NullOrEmpty());
-
-                            IEnumerable<TraitDef> traits = DefDatabase<TraitDef>.AllDefsListForReading.Where(td => td.defName.StartsWith("Ankh"));
 
                             for(int i = 0; i<pawns.Count;i++)
                             {
@@ -1071,7 +1082,7 @@ namespace Ankh
                                 ThingWithComps weapon = ThingMaker.MakeThing(weaponDef, weaponDef.MadeFromStuff ? ThingDefOf.Plasteel : null) as ThingWithComps;
                                 weapon.TryGetComp<CompQuality>().SetQuality(Rand.Bool ? QualityCategory.Normal : Rand.Bool ? QualityCategory.Good : QualityCategory.Superior, ArtGenerationContext.Colony);
                                 pawn.equipment.AddEquipment(weapon);
-                                pawn.story.traits.GainTrait(new Trait(traits.RandomElement(), 0, true));
+                                pawn.story.traits.GainTrait(new Trait(AnkhDefs.ankhTraits.RandomElement(), 0, true));
                             }
 
                             DropPodUtility.DropThingsNear(parms.spawnCenter, map, pawns.Cast<Thing>(), parms.raidPodOpenDelay, false, true, true);
@@ -1094,7 +1105,7 @@ namespace Ankh
 
             #region MapConditions
             {
-                MapConditionDef wrath1ConditionDef = new MapConditionDef()
+                MapConditionDef wrathConditionDef = new MapConditionDef()
                 {
                     defName = "wrathConditionDef",
                     conditionClass = typeof(CustomIncidentCall.MapCondition_WrathBombing),
@@ -1104,9 +1115,10 @@ namespace Ankh
                     preventRain = false,
                     canBePermanent = true
                 };
-                wrath1ConditionDef.ResolveReferences();
-                wrath1ConditionDef.PostLoad();
-                DefDatabase<MapConditionDef>.Add(wrath1ConditionDef);
+                wrathConditionDef.ResolveReferences();
+                wrathConditionDef.PostLoad();
+                DefDatabase<MapConditionDef>.Add(wrathConditionDef);
+                AnkhDefs.wrathCondition = wrathConditionDef;
             }
             #endregion
             #region Incidents
@@ -1123,20 +1135,8 @@ namespace Ankh
                 miracleHeal.PostLoad();
                 shortHashGiver.Invoke(null, new object[] { miracleHeal });
                 DefDatabase<IncidentDef>.Add(miracleHeal);
+                AnkhDefs.miracleHeal = miracleHeal;
             }
-            /*{
-                IncidentDef sacrificeOption = new IncidentDef()
-                {
-                    defName = "SacrificeForTheGods",
-                    label = "sacrifice",
-                    targetType = IncidentTargetType.BaseMap,
-                    workerClass = typeof(CustomIncidentCall.Sacrifice),
-                    baseChance = 10
-                };
-                sacrificeOption.ResolveReferences();
-                sacrificeOption.PostLoad();
-                DefDatabase<IncidentDef>.Add(sacrificeOption);
-            }*/
             #endregion
             #region Buildings
             {
@@ -1224,6 +1224,7 @@ namespace Ankh
                 DefDatabase<ThingDef>.Add(zap.frameDef);
                 zap.designationCategory.ResolveReferences();
                 zap.designationCategory.PostLoad();
+                AnkhDefs.zapActivator = zap;
             }
             {
                 ThingDef therm = new ThingDef()
@@ -1309,6 +1310,7 @@ namespace Ankh
                 DefDatabase<ThingDef>.Add(therm.frameDef);
                 therm.designationCategory.ResolveReferences();
                 therm.designationCategory.PostLoad();
+                AnkhDefs.thermActivator = therm;
             }
             {
                 ThingDef peg = new ThingDef()
@@ -1394,6 +1396,7 @@ namespace Ankh
                 DefDatabase<ThingDef>.Add(peg.frameDef);
                 peg.designationCategory.ResolveReferences();
                 peg.designationCategory.PostLoad();
+                AnkhDefs.pegActivator = peg;
             }
             {
                 ThingDef repo = new ThingDef()
@@ -1479,6 +1482,8 @@ namespace Ankh
                 DefDatabase<ThingDef>.Add(repo.frameDef);
                 repo.designationCategory.ResolveReferences();
                 repo.designationCategory.PostLoad();
+
+                AnkhDefs.repoActivator = repo;
             }
             {
                 ThingDef bob = new ThingDef()
@@ -1564,6 +1569,7 @@ namespace Ankh
                 DefDatabase<ThingDef>.Add(bob.frameDef);
                 bob.designationCategory.ResolveReferences();
                 bob.designationCategory.PostLoad();
+                AnkhDefs.bobActivator = bob;
             }
             {
                 ThingDef rootsy = new ThingDef()
@@ -1649,6 +1655,7 @@ namespace Ankh
                 DefDatabase<ThingDef>.Add(rootsy.frameDef);
                 rootsy.designationCategory.ResolveReferences();
                 rootsy.designationCategory.PostLoad();
+                AnkhDefs.rootsyActivator = rootsy;
             }
             {
                 ThingDef humour = new ThingDef()
@@ -1734,6 +1741,7 @@ namespace Ankh
                 DefDatabase<ThingDef>.Add(humour.frameDef);
                 humour.designationCategory.ResolveReferences();
                 humour.designationCategory.PostLoad();
+                AnkhDefs.humourActivator = humour;
             }
             {
                 ThingDef dorf = new ThingDef()
@@ -1819,6 +1827,7 @@ namespace Ankh
                 DefDatabase<ThingDef>.Add(dorf.frameDef);
                 dorf.designationCategory.ResolveReferences();
                 dorf.designationCategory.PostLoad();
+                AnkhDefs.dorfActivator = dorf;
             }
             #endregion
             #region Thoughts
@@ -1843,6 +1852,7 @@ namespace Ankh
                 fnarghWrath.PostLoad();
                 shortHashGiver.Invoke(null, new object[] { fnarghWrath });
                 DefDatabase<ThoughtDef>.Add(fnarghWrath);
+                AnkhDefs.fnarghWrath = fnarghWrath;
             }
             {
                 ThoughtDef fnarghFavor = new ThoughtDef()
@@ -1865,33 +1875,77 @@ namespace Ankh
                 fnarghFavor.PostLoad();
                 shortHashGiver.Invoke(null, new object[] { fnarghFavor });
                 DefDatabase<ThoughtDef>.Add(fnarghFavor);
+                AnkhDefs.fnarghFavor = fnarghFavor;
             }
-
             #endregion
             #region Traits
             {
-                TraitDef thrustsOfVeneration = new TraitDef()
+                TraitDef fiveKnuckleShuffle = new TraitDef()
                 {
-                    defName = "AnkhThrustsOfVeneration",
-                    label = "Ucefzach's Lubricious Thrusts of Veneration",
-                    description = "whatever, pladd, tell me something",
+                    defName = "fiveKnuckleShuffle",
+                    label = "iamdar's Five Knuckle Shuffle",
+                    description = "Downward Dick's good good touchin' has enhanced your focus and manipulation!",
                     degreeDatas = new List<TraitDegreeData>()
                     {
                         new TraitDegreeData()
                         {
-                            label = "Ucefzach's Lubricious Thrusts of Veneration",
-                            description = "whatever, pladd tell me something",
+                            label = "iamdar's Five Knuckle Shuffle",
+                            description = "Downward Dick's good good touchin' has enhanced your focus and manipulation!"
+                        }
+                    }
+                };
+                fiveKnuckleShuffle.ResolveReferences();
+                fiveKnuckleShuffle.PostLoad();
+                shortHashGiver.Invoke(null, new object[] { fiveKnuckleShuffle });
+                DefDatabase<TraitDef>.Add(fiveKnuckleShuffle);
+                AnkhDefs.ankhTraits.Add(fiveKnuckleShuffle);
+                AnkhDefs.fiveKnuckleShuffle = fiveKnuckleShuffle;
+            }
+            {
+                TraitDef coneOfShame = new TraitDef()
+                {
+                    defName = "coneOfShame",
+                    label = "chiky's Cone of Shame",
+                    description = " Downward Dick's good good touchin' has enhanced your focus and your visual acuity!",
+                    degreeDatas = new List<TraitDegreeData>()
+                    {
+                        new TraitDegreeData()
+                        {
+                            label = "chiky's Cone of Shame",
+                            description = " Downward Dick's good good touchin' has enhanced your focus and your visual acuity!"
+                        }
+                    }
+                };
+                coneOfShame.ResolveReferences();
+                coneOfShame.PostLoad();
+                shortHashGiver.Invoke(null, new object[] { coneOfShame });
+                DefDatabase<TraitDef>.Add(coneOfShame);
+                AnkhDefs.ankhTraits.Add(coneOfShame);
+                AnkhDefs.coneOfShame = coneOfShame;
+            }
+            {
+                TraitDef thrustsOfVeneration = new TraitDef()
+                {
+                    defName = "thrustsOfVeneration",
+                    label = "Ucefzach's Thrusts",
+                    description = "Downward Dick's good good touchin' has made you a more effective warrior!",
+                    degreeDatas = new List<TraitDegreeData>()
+                    {
+                        new TraitDegreeData()
+                        {
+                            label = "Ucefzach's Thrusts",
+                            description = "Downward Dick's good good touchin' has made you a more effective warrior!",
                             statOffsets = new List<StatModifier>()
                             {
                                 new StatModifier()
                                 {
                                     stat = StatDefOf.MeleeHitChance,
-                                    value = 1.5f
+                                    value = 0.5f
                                 },
                                 new StatModifier()
                                 {
                                     stat = StatDefOf.AimingDelayFactor,
-                                    value = 0.5f
+                                    value = -0.5f
                                 }
                             }
                         }
@@ -1901,40 +1955,41 @@ namespace Ankh
                 thrustsOfVeneration.PostLoad();
                 shortHashGiver.Invoke(null, new object[] { thrustsOfVeneration });
                 DefDatabase<TraitDef>.Add(thrustsOfVeneration);
+                AnkhDefs.ankhTraits.Add(thrustsOfVeneration);
             }
             {
                 TraitDef armoredTouch = new TraitDef()
                 {
-                    defName = "AnkhArmoredTouch",
+                    defName = "armoredTouch",
                     label = "Southpond's En-Armored Touch",
-                    description = "whatever, pladd, tell me something",
+                    description = "Downward Dick's good good touchin' has surrounded you with a magical armored barrier!",
                     degreeDatas = new List<TraitDegreeData>()
                     {
                         new TraitDegreeData()
                         {
                             label = "Southpond's En-Armored Touch",
-                            description = "whatever, pladd tell me something",
+                            description = "Downward Dick's good good touchin' has surrounded you with a magical armored barrier!",
                             statOffsets = new List<StatModifier>()
                             {
                                 new StatModifier()
                                 {
                                     stat = StatDefOf.ArmorRating_Blunt,
-                                    value = 1.5f
+                                    value = 0.5f
                                 },
                                 new StatModifier()
                                 {
                                     stat = StatDefOf.ArmorRating_Electric,
-                                    value = 1.5f
+                                    value = 0.5f
                                 },
                                 new StatModifier()
                                 {
                                     stat = StatDefOf.ArmorRating_Heat,
-                                    value = 1.5f
+                                    value = 0.5f
                                 },
                                 new StatModifier()
                                 {
                                     stat = StatDefOf.ArmorRating_Sharp,
-                                    value = 1.5f
+                                    value = 0.5f
                                 }
                             }
                         }
@@ -1944,19 +1999,20 @@ namespace Ankh
                 armoredTouch.PostLoad();
                 shortHashGiver.Invoke(null, new object[] { armoredTouch });
                 DefDatabase<TraitDef>.Add(armoredTouch);
+                AnkhDefs.ankhTraits.Add(armoredTouch);
             }
             {
                 TraitDef teaAndScones = new TraitDef()
                 {
-                    defName = "AnkhTeaAndScones",
+                    defName = "teaAndScones",
                     label = "maebak's tea and scones",
-                    description = "whatever, pladd, tell me something",
+                    description = "Downward Dick's good good touchin' has increased your healing rate!",
                     degreeDatas = new List<TraitDegreeData>()
                     {
                         new TraitDegreeData()
                         {
                             label = "maebak's tea and scones",
-                            description = "whatever, pladd tell me something",
+                            description = "Downward Dick's good good touchin' has increased your healing rate!",
                             statOffsets = new List<StatModifier>()
                             {
                                 new StatModifier()
@@ -1977,6 +2033,77 @@ namespace Ankh
                 teaAndScones.PostLoad();
                 shortHashGiver.Invoke(null, new object[] { teaAndScones });
                 DefDatabase<TraitDef>.Add(teaAndScones);
+                AnkhDefs.ankhTraits.Add(teaAndScones);
+            }
+            #endregion
+            #region Hediffs
+            {
+                HediffDef fiveKnuckleShuffleHediff = new HediffDef()
+                {
+                    defName = "fiveKnuckleShuffleHediff",
+                    label = "iamdar's five knuckle shuffle",
+                    description = "Whatever.. pladd tell me something",
+                    hediffClass = typeof(Hediff),
+                    stages = new List<HediffStage>()
+                    {
+                        new HediffStage()
+                        {
+                            capMods = new List<PawnCapacityModifier>()
+                            {
+                                new PawnCapacityModifier()
+                                {
+                                    capacity = PawnCapacityDefOf.Consciousness,
+                                    offset = 0.4f
+                                },
+                                new PawnCapacityModifier()
+                                {
+                                    capacity = PawnCapacityDefOf.Manipulation,
+                                    offset = 0.4f
+                                }
+                            },
+                            everVisible = false
+                        }
+                    }
+                };
+                fiveKnuckleShuffleHediff.ResolveReferences();
+                fiveKnuckleShuffleHediff.PostLoad();
+                shortHashGiver.Invoke(null, new object[] { fiveKnuckleShuffleHediff });
+                DefDatabase<HediffDef>.Add(fiveKnuckleShuffleHediff);
+                AnkhDefs.fiveKnuckleShuffleHediff = fiveKnuckleShuffleHediff;
+            }
+            {
+                HediffDef coneOfShameHediff = new HediffDef()
+                {
+                    defName = "coneOfShameHediff",
+                    label = "chiky's Cone of Shame",
+                    description = "Whatever.. pladd tell me something",
+                    hediffClass = typeof(Hediff),
+                    stages = new List<HediffStage>()
+                    {
+                        new HediffStage()
+                        {
+                            capMods = new List<PawnCapacityModifier>()
+                            {
+                                new PawnCapacityModifier()
+                                {
+                                    capacity = PawnCapacityDefOf.Consciousness,
+                                    offset = 0.4f
+                                },
+                                new PawnCapacityModifier()
+                                {
+                                    capacity = PawnCapacityDefOf.Sight,
+                                    offset = 0.4f
+                                }
+                            },
+                            everVisible = false
+                        }
+                    }
+                };
+                coneOfShameHediff.ResolveReferences();
+                coneOfShameHediff.PostLoad();
+                shortHashGiver.Invoke(null, new object[] { coneOfShameHediff });
+                DefDatabase<HediffDef>.Add(coneOfShameHediff);
+                AnkhDefs.coneOfShameHediff = coneOfShameHediff;
             }
             #endregion
         }
