@@ -783,7 +783,7 @@ namespace Ankh
                              if (p != null)
                              {
                                  p.needs.mood.thoughts.memories.TryGainMemoryThought(AnkhDefs.fnarghWrath);
-                                 p.mindState.mentalStateHandler.TryStartMentalState(DefDatabase<MentalStateDef>.AllDefs.Where(msd => !msd.defName.EqualsIgnoreCase("PanicFlee") && !msd.defName.EqualsIgnoreCase("GiveUpExit") && msd.Worker.GetType().GetField("otherPawn", (BindingFlags) 60) == null).RandomElement(), "Fnargh's wrath", true, true);
+                                 p.mindState.mentalStateHandler.TryStartMentalState(DefDatabase<MentalStateDef>.AllDefs.Where(msd => !msd.defName.EqualsIgnoreCase("SocialFight") && !msd.defName.EqualsIgnoreCase("PanicFlee") && !msd.defName.EqualsIgnoreCase("GiveUpExit") && msd.Worker.GetType().GetField("otherPawn", (BindingFlags) 60) == null).RandomElement(), "Fnargh's wrath", true, true);
                                  if (letter)
                                      Find.LetterStack.ReceiveLetter("fnargh's wrath",
                                          "The god fnargh is angry at your colony. He commands the web of thought to make " + p.NameStringShort + " mad", LetterType.BadNonUrgent, p);
@@ -1002,7 +1002,7 @@ namespace Ankh
                             if(pawns.NullOrEmpty())
                                 throw new Exception();
 
-                            pawns.ToList().ForEach(p =>
+                            pawns.ForEach(p =>
                             {
                                 Trait trait = null;
                                 do
