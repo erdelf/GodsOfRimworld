@@ -51,6 +51,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
     <OutputPath>..\..\Assemblies\</OutputPath>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
@@ -72,7 +73,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AnkhDefs.cs" />
-    <Compile Include="Behaviour_Interpreter.cs" />
+    <Compile Include="BehaviourInterpreter.cs" />
     <Compile Include="Buildings.cs" />
     <Compile Include="CustomIncidentClasses.cs" />
     <Compile Include="InstanceVariables.cs" />

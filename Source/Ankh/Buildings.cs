@@ -18,10 +18,10 @@ namespace Ankh
                 List<IAttackTarget> potentialTargetsFor = this.Map.attackTargetsCache.GetPotentialTargetsFor(this);
                 LocalTargetInfo target = GenClosest.ClosestThing_Global(this.Position, potentialTargetsFor, 25.9f);
 
-                if (target.IsValid && Behaviour_Interpreter.staticVariables.zapCount > 0)
+                if (target.IsValid && BehaviourInterpreter.staticVariables.zapCount > 0)
                 {
                     this.Map.weatherManager.eventHandler.AddEvent(new WeatherEvent_LightningStrike(this.Map, target.Cell));
-                    Behaviour_Interpreter.staticVariables.zapCount--;
+                    BehaviourInterpreter.staticVariables.zapCount--;
                 }
             }
 
@@ -34,7 +34,7 @@ namespace Ankh
             public override string GetInspectString()
             {
                 StringBuilder sb = new StringBuilder(base.GetInspectString());
-                sb.AppendLine("Zap favors: " + Behaviour_Interpreter.staticVariables.zapCount);
+                sb.AppendLine("Zap favors: " + BehaviourInterpreter.staticVariables.zapCount);
                 return sb.ToString();
             }
         }
@@ -45,7 +45,7 @@ namespace Ankh
                 foreach (Gizmo g in base.GetGizmos())
                     yield return g;
 
-                if (Behaviour_Interpreter.staticVariables.thermCount > 0)
+                if (BehaviourInterpreter.staticVariables.thermCount > 0)
                 {
                     Command_Action therm = new Command_Action()
                     {
@@ -95,8 +95,8 @@ namespace Ankh
                                     }
                                 }
                             }
-                            Behaviour_Interpreter.staticVariables.thermCount--;
-                            if (Behaviour_Interpreter.staticVariables.thermCount > 0) Behaviour_Interpreter._instance.WaitAndExecute(() => therm.action());
+                            BehaviourInterpreter.staticVariables.thermCount--;
+                            if (BehaviourInterpreter.staticVariables.thermCount > 0) BehaviourInterpreter._instance.WaitAndExecute(() => therm.action());
                         }, null, null, therm.icon);
                     };
                     yield return therm;
@@ -146,8 +146,8 @@ namespace Ankh
                                     }
                                 }
                             }
-                            Behaviour_Interpreter.staticVariables.thermCount--;
-                            if (Behaviour_Interpreter.staticVariables.thermCount > 0) Behaviour_Interpreter._instance.WaitAndExecute(() => extinguish.action());  //LongEventHandler.QueueLongEvent(() => extinguish.action(), "", false, null);
+                            BehaviourInterpreter.staticVariables.thermCount--;
+                            if (BehaviourInterpreter.staticVariables.thermCount > 0) BehaviourInterpreter._instance.WaitAndExecute(() => extinguish.action());  //LongEventHandler.QueueLongEvent(() => extinguish.action(), "", false, null);
                         }, null, null, extinguish.icon);
                     };
 
@@ -158,7 +158,7 @@ namespace Ankh
             public override string GetInspectString()
             {
                 StringBuilder sb = new StringBuilder(base.GetInspectString());
-                sb.AppendLine("Therm favors: " + Behaviour_Interpreter.staticVariables.thermCount);
+                sb.AppendLine("Therm favors: " + BehaviourInterpreter.staticVariables.thermCount);
                 return sb.ToString();
             }
         }
@@ -169,7 +169,7 @@ namespace Ankh
                 foreach (Gizmo g in base.GetGizmos())
                     yield return g;
 
-                if (Behaviour_Interpreter.staticVariables.pegCount > 0)
+                if (BehaviourInterpreter.staticVariables.pegCount > 0)
                 {
                     Command_Action bomb = new Command_Action()
                     {
@@ -208,9 +208,9 @@ namespace Ankh
                         {
                             GenExplosion.DoExplosion(lti.Cell, this.Map, 3.9f, DamageDefOf.Bomb, null);
 
-                            Behaviour_Interpreter.staticVariables.pegCount--;
-                            if (Behaviour_Interpreter.staticVariables.pegCount > 0)
-                                Behaviour_Interpreter._instance.WaitAndExecute(() => bomb.action());
+                            BehaviourInterpreter.staticVariables.pegCount--;
+                            if (BehaviourInterpreter.staticVariables.pegCount > 0)
+                                BehaviourInterpreter._instance.WaitAndExecute(() => bomb.action());
                         }, null, null, bomb.icon);
                     };
                     yield return bomb;
@@ -226,7 +226,7 @@ namespace Ankh
             public override string GetInspectString()
             {
                 StringBuilder sb = new StringBuilder(base.GetInspectString());
-                sb.AppendLine("Peg favors: " + Behaviour_Interpreter.staticVariables.pegCount);
+                sb.AppendLine("Peg favors: " + BehaviourInterpreter.staticVariables.pegCount);
                 return sb.ToString();
             }
         }
@@ -245,7 +245,7 @@ namespace Ankh
                 foreach (Gizmo g in base.GetGizmos())
                     yield return g;
 
-                if (Behaviour_Interpreter.staticVariables.repoCount > 0)
+                if (BehaviourInterpreter.staticVariables.repoCount > 0)
                 {
                     Command_Action restore = new Command_Action()
                     {
@@ -300,9 +300,9 @@ namespace Ankh
 
                             recipe.Worker.ApplyOnPawn(p, record, null, recipe.fixedIngredientFilter.AllowedThingDefs.Select(td => ThingMaker.MakeThing(td, td.MadeFromStuff ? GenStuff.DefaultStuffFor(td) : null)).ToList());
 
-                            Behaviour_Interpreter.staticVariables.repoCount--;
-                            if (Behaviour_Interpreter.staticVariables.repoCount > 0)
-                                Behaviour_Interpreter._instance.WaitAndExecute(() => restore.action());
+                            BehaviourInterpreter.staticVariables.repoCount--;
+                            if (BehaviourInterpreter.staticVariables.repoCount > 0)
+                                BehaviourInterpreter._instance.WaitAndExecute(() => restore.action());
                         }, null, null, restore.icon);
                     };
                     yield return restore;
@@ -326,7 +326,7 @@ namespace Ankh
             public override string GetInspectString()
             {
                 StringBuilder sb = new StringBuilder(base.GetInspectString());
-                sb.AppendLine("Repo favors: " + Behaviour_Interpreter.staticVariables.repoCount);
+                sb.AppendLine("Repo favors: " + BehaviourInterpreter.staticVariables.repoCount);
                 return sb.ToString();
             }
         }
@@ -337,7 +337,7 @@ namespace Ankh
                 foreach (Gizmo g in base.GetGizmos())
                     yield return g;
 
-                if (Behaviour_Interpreter.staticVariables.bobCount > 0)
+                if (BehaviourInterpreter.staticVariables.bobCount > 0)
                 {
                     Command_Action build = new Command_Action()
                     {
@@ -365,9 +365,9 @@ namespace Ankh
                             GenSpawn.Spawn(wall, lti.Cell, Find.VisibleMap);
                             wall.SetFaction(Faction.OfPlayer);
 
-                            Behaviour_Interpreter.staticVariables.bobCount--;
-                            if (Behaviour_Interpreter.staticVariables.bobCount > 0)
-                                Behaviour_Interpreter._instance.WaitAndExecute(() => build.action());
+                            BehaviourInterpreter.staticVariables.bobCount--;
+                            if (BehaviourInterpreter.staticVariables.bobCount > 0)
+                                BehaviourInterpreter._instance.WaitAndExecute(() => build.action());
                         }, null, null, build.icon);
                     };
                     yield return build;
@@ -383,7 +383,7 @@ namespace Ankh
             public override string GetInspectString()
             {
                 StringBuilder sb = new StringBuilder(base.GetInspectString());
-                sb.AppendLine("Bob favors: " + Behaviour_Interpreter.staticVariables.bobCount);
+                sb.AppendLine("Bob favors: " + BehaviourInterpreter.staticVariables.bobCount);
                 return sb.ToString();
             }
         }
@@ -394,7 +394,7 @@ namespace Ankh
                 foreach (Gizmo g in base.GetGizmos())
                     yield return g;
 
-                if (Behaviour_Interpreter.staticVariables.rootsyCount > 0)
+                if (BehaviourInterpreter.staticVariables.rootsyCount > 0)
                 {
                     Command_Action grower = new Command_Action()
                     {
@@ -442,9 +442,9 @@ namespace Ankh
                                     MoteMaker.ThrowMetaPuff(current.ToVector3(), Find.VisibleMap);
                                 }
                             }
-                            Behaviour_Interpreter.staticVariables.rootsyCount--;
-                            if (Behaviour_Interpreter.staticVariables.rootsyCount > 0)
-                                Behaviour_Interpreter._instance.WaitAndExecute(() => grower.action());  //LongEventHandler.QueueLongEvent(() => extinguish.action(), "", false, null);
+                            BehaviourInterpreter.staticVariables.rootsyCount--;
+                            if (BehaviourInterpreter.staticVariables.rootsyCount > 0)
+                                BehaviourInterpreter._instance.WaitAndExecute(() => grower.action());  //LongEventHandler.QueueLongEvent(() => extinguish.action(), "", false, null);
                         }, null, null, grower.icon);
                     };
 
@@ -455,7 +455,7 @@ namespace Ankh
             public override string GetInspectString()
             {
                 StringBuilder sb = new StringBuilder(base.GetInspectString());
-                sb.AppendLine("Rootsy favors: " + Behaviour_Interpreter.staticVariables.rootsyCount);
+                sb.AppendLine("Rootsy favors: " + BehaviourInterpreter.staticVariables.rootsyCount);
                 return sb.ToString();
             }
         }
@@ -474,7 +474,7 @@ namespace Ankh
                 foreach (Gizmo g in base.GetGizmos())
                     yield return g;
 
-                if (Behaviour_Interpreter.staticVariables.humourCount > 0)
+                if (BehaviourInterpreter.staticVariables.humourCount > 0)
                 {
                     Command_Action healer = new Command_Action()
                     {
@@ -513,9 +513,9 @@ namespace Ankh
                                 hediffs.Remove(hediff);
                             }
 
-                            Behaviour_Interpreter.staticVariables.humourCount--;
-                            if (Behaviour_Interpreter.staticVariables.humourCount > 0)
-                                Behaviour_Interpreter._instance.WaitAndExecute(() => healer.action());  //LongEventHandler.QueueLongEvent(() => extinguish.action(), "", false, null);
+                            BehaviourInterpreter.staticVariables.humourCount--;
+                            if (BehaviourInterpreter.staticVariables.humourCount > 0)
+                                BehaviourInterpreter._instance.WaitAndExecute(() => healer.action());  //LongEventHandler.QueueLongEvent(() => extinguish.action(), "", false, null);
                         }, null, null, healer.icon);
                     };
 
@@ -553,15 +553,15 @@ namespace Ankh
                             p.health.immunity.GetImmunityRecord(hediff.def).immunity += 0.10f;
 
 
-                            Behaviour_Interpreter.staticVariables.humourCount--;
-                            if (Behaviour_Interpreter.staticVariables.humourCount > 0)
-                                Behaviour_Interpreter._instance.WaitAndExecute(() => immunity.action());
+                            BehaviourInterpreter.staticVariables.humourCount--;
+                            if (BehaviourInterpreter.staticVariables.humourCount > 0)
+                                BehaviourInterpreter._instance.WaitAndExecute(() => immunity.action());
                         }, null, null, immunity.icon);
                     };
 
                     yield return immunity;
 
-                    if(Behaviour_Interpreter.staticVariables.humourCount >= 10)
+                    if(BehaviourInterpreter.staticVariables.humourCount >= 10)
                     {
                         Command_Action revive = new Command_Action()
                         {
@@ -605,9 +605,9 @@ namespace Ankh
                                 pawn.workSettings.EnableAndInitialize();
                                 GenSpawn.Spawn(pawn, lti.Cell, Find.VisibleMap);
 
-                                Behaviour_Interpreter.staticVariables.humourCount-=10;
-                                if (Behaviour_Interpreter.staticVariables.humourCount > 10)
-                                    Behaviour_Interpreter._instance.WaitAndExecute(() => revive.action());
+                                BehaviourInterpreter.staticVariables.humourCount-=10;
+                                if (BehaviourInterpreter.staticVariables.humourCount > 10)
+                                    BehaviourInterpreter._instance.WaitAndExecute(() => revive.action());
                             }, null, null, revive.icon);
                         };
 
@@ -633,7 +633,7 @@ namespace Ankh
             public override string GetInspectString()
             {
                 StringBuilder sb = new StringBuilder(base.GetInspectString());
-                sb.AppendLine("Humour favors: " + Behaviour_Interpreter.staticVariables.humourCount);
+                sb.AppendLine("Humour favors: " + BehaviourInterpreter.staticVariables.humourCount);
                 return sb.ToString();
             }
         }
@@ -644,7 +644,7 @@ namespace Ankh
                 foreach (Gizmo g in base.GetGizmos())
                     yield return g;
 
-                if (Behaviour_Interpreter.staticVariables.dorfCount > 0)
+                if (BehaviourInterpreter.staticVariables.dorfCount > 0)
                 {
                     Command_Action miner = new Command_Action()
                     {
@@ -693,9 +693,9 @@ namespace Ankh
                                     MoteMaker.ThrowMetaPuff(current.ToVector3(), Find.VisibleMap);
                                 }
                             }
-                            Behaviour_Interpreter.staticVariables.dorfCount--;
-                            if (Behaviour_Interpreter.staticVariables.dorfCount > 0)
-                                Behaviour_Interpreter._instance.WaitAndExecute(() => miner.action());
+                            BehaviourInterpreter.staticVariables.dorfCount--;
+                            if (BehaviourInterpreter.staticVariables.dorfCount > 0)
+                                BehaviourInterpreter._instance.WaitAndExecute(() => miner.action());
                         }, null, null, miner.icon);
                     };
 
@@ -706,7 +706,7 @@ namespace Ankh
             public override string GetInspectString()
             {
                 StringBuilder sb = new StringBuilder(base.GetInspectString());
-                sb.AppendLine("Dorf favors: " + Behaviour_Interpreter.staticVariables.dorfCount);
+                sb.AppendLine("Dorf favors: " + BehaviourInterpreter.staticVariables.dorfCount);
                 return sb.ToString();
             }
         }
