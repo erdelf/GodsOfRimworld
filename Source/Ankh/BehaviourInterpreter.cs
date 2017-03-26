@@ -461,9 +461,7 @@ namespace Ankh
                         }
                         else
                         {
-                            IncidentParms incidentParms = new IncidentParms(){
-                                target = Find.AnyPlayerHomeMap
-                            };
+                            IncidentParms incidentParms = StorytellerUtility.DefaultParmsNow(Find.Storyteller.def, IncidentCategory.ThreatBig, Find.AnyPlayerHomeMap);
 
                             Letter letterobj = new Letter("sparto's wrath",
                                     "The god of war is angry at your colony. She commands the locals of this world to attack", LetterType.BadUrgent);

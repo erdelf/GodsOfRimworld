@@ -23,6 +23,7 @@ namespace Ankh
         {
             object obj = IncidentDefOf.RaidEnemy.Worker;
             Map map = (Map)parms.target;
+            parms.points = Rand.Range(50f, 300f);
             RaidPointInfo.Invoke(obj, new object[] { parms });
             if (!(bool)RaidFactionInfo.Invoke(obj, new object[] { parms }))
             {
