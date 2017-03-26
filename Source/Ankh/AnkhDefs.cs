@@ -27,5 +27,7 @@ namespace Ankh
         public static TraitDef coneOfShame;
         public static HediffDef fiveKnuckleShuffleHediff;
         public static HediffDef coneOfShameHediff;
+
+        public static TraitDef teaAndScones;
     }
 }
