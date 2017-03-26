@@ -1100,6 +1100,8 @@ namespace Ankh
                                 }
                                 pawn.equipment.DestroyAllEquipment();
                                 ThingDef weaponDef = new ThingDef[] { ThingDef.Named("Gun_AssaultRifle"), ThingDef.Named("Gun_ChargeRifle"), ThingDef.Named("MeleeWeapon_LongSword") }.RandomElement();
+                                if(weaponDef.IsRangedWeapon)
+                                    pawn.apparel.WornApparel.RemoveAll(ap => ap.def == ThingDefOf.Apparel_PersonalShield);
                                 ThingWithComps weapon = ThingMaker.MakeThing(weaponDef, weaponDef.MadeFromStuff ? ThingDefOf.Plasteel : null) as ThingWithComps;
                                 weapon.TryGetComp<CompQuality>().SetQuality(Rand.Bool ? QualityCategory.Normal : Rand.Bool ? QualityCategory.Good : QualityCategory.Superior, ArtGenerationContext.Colony);
                                 pawn.equipment.AddEquipment(weapon);
@@ -1117,7 +1119,33 @@ namespace Ankh
                                     "The god of dicks is angry at your colony.", LetterType.BadUrgent, new GlobalTargetInfo(parms.spawnCenter, map));
                         }
                     }
-                }
+                }/*,
+                {
+                    "erdelf",
+                    delegate(bool favor, bool letter)
+                    {
+                        if(favor)
+                        {
+
+                        } else
+                        {
+
+                        }
+                    }
+                },
+                {
+                    "pladd",
+                    delegate(bool favor, bool letter)
+                    {
+                        if(favor)
+                        {
+
+                        } else
+                        {
+
+                        }
+                    }
+                }*/
         };
 
         static void PrepareDefs()
