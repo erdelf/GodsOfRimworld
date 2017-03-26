@@ -722,10 +722,10 @@ namespace Ankh
                             Map map = Find.AnyPlayerHomeMap;
                             List<Thing> silver = map.listerThings.ThingsOfDef(ThingDefOf.Silver);
 
-                            if(silver.Sum(t => t.stackCount) < 100)
+                            if(silver.Sum(t => t.stackCount) < 200)
                                 throw new Exception();
 
-                            int i = 100;
+                            int i = 200;
 
                             while(i > 0)
                             {
@@ -740,7 +740,7 @@ namespace Ankh
                                     piece.Destroy();
                                 }
                             }
-                            for(int c = 0; c<30; c++)
+                            for(int c = 0; c<50; c++)
                             {
                                 if (!map.areaManager.Home.ActiveCells.Where(l => l.Standable(map)).TryRandomElement(out IntVec3 position))
                                     throw new Exception();
