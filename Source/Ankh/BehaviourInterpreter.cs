@@ -997,7 +997,7 @@ namespace Ankh
                     {
                         if(favor)
                         {
-                            Find.ColonistBar.GetColonistsInOrder().Where((Pawn x) => !x.Dead).ToList().ForEach(p =>
+                            Find.ColonistBar.GetColonistsInOrder().Where((Pawn x) => !x.Dead && !AnkhDefs.ankhTraits.TrueForAll(t => x.story.traits.HasTrait(t))).ToList().ForEach(p =>
                             {
                                 Trait trait = null;
                                 do
