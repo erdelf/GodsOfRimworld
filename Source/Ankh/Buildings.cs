@@ -16,7 +16,7 @@ namespace Ankh
             public override void TickRare()
             {
                 List<IAttackTarget> potentialTargetsFor = this.Map.attackTargetsCache.GetPotentialTargetsFor(this);
-                LocalTargetInfo target = GenClosest.ClosestThing_Global(this.Position, potentialTargetsFor, 25.9f);
+                LocalTargetInfo target = GenClosest.ClosestThing_Global(this.Position, potentialTargetsFor, 25.9f, t => !((t as Pawn)?.Downed ?? false));
 
                 if (target.IsValid && BehaviourInterpreter.staticVariables.zapCount > 0)
                 {
