@@ -997,13 +997,19 @@ namespace Ankh
                     {
                         if(favor)
                         {
-                            Find.ColonistBar.GetColonistsInOrder().Where((Pawn x) => !x.Dead && !AnkhDefs.ankhTraits.TrueForAll(t => x.story.traits.HasTrait(t))).ToList().ForEach(p =>
+                            List<Pawn> pawns = Find.ColonistBar.GetColonistsInOrder().Where((Pawn x) => !x.Dead && !AnkhDefs.ankhTraits.TrueForAll(t => x.story.traits.HasTrait(t))).ToList();
+
+                            if(pawns.NullOrEmpty())
+                                throw new Exception();
+
+                            pawns.ToList().ForEach(p =>
                             {
                                 Trait trait = null;
                                 do
                                 {
                                     trait = new Trait(AnkhDefs.ankhTraits.RandomElement(), 0, true);
-                                    p.story.traits.GainTrait(trait);
+                                    if(!p.story.traits.HasTrait(trait.def))
+                                        p.story.traits.GainTrait(trait);
                                 }while (!p.story.traits.allTraits.Contains(trait));
                                 p.story.traits.allTraits.Remove(trait);
                                 p.story.traits.allTraits.Insert(0, trait);
