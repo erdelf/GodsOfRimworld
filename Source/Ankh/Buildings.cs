@@ -317,10 +317,27 @@ namespace Ankh
 
             public override void Destroy(DestroyMode mode = DestroyMode.Vanish)
             {
+                ReEnterBuildingDesignator();
+                base.Destroy(mode);
+            }
+
+            public override void DeSpawn()
+            {
+                ReEnterBuildingDesignator();
+                base.DeSpawn();
+            }
+
+            public override void Discard()
+            {
+                ReEnterBuildingDesignator();
+                base.Discard();
+            }
+
+            private void ReEnterBuildingDesignator()
+            {
                 List<Designator> resolved = (resolvedDesignatorInfo.GetValue(this.def.designationCategory) as List<Designator>);
                 resolved.Add(new Designator_Build(this.def));
                 resolvedDesignatorInfo.SetValue(this.def.designationCategory, resolved);
-                base.Destroy(mode);
             }
 
             public override string GetInspectString()
@@ -561,7 +578,7 @@ namespace Ankh
 
                     yield return immunity;
 
-                    if(BehaviourInterpreter.staticVariables.humourCount >= 10)
+                    if (BehaviourInterpreter.staticVariables.humourCount >= 10)
                     {
                         Command_Action revive = new Command_Action()
                         {
@@ -589,7 +606,7 @@ namespace Ankh
                                 Corpse corpse = lti.Cell.GetThingList(Find.VisibleMap).Find(t => t is Corpse) as Corpse;
                                 Pawn pawn = corpse.InnerPawn;
                                 corpse.Destroy();
-                                typeof(Thing).GetField("mapIndexOrState", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(pawn, (sbyte) -1);
+                                typeof(Thing).GetField("mapIndexOrState", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(pawn, (sbyte)-1);
 
                                 pawn.health.Reset();
                                 pawn.workSettings = new Pawn_WorkSettings(pawn);
@@ -605,7 +622,7 @@ namespace Ankh
                                 pawn.workSettings.EnableAndInitialize();
                                 GenSpawn.Spawn(pawn, lti.Cell, Find.VisibleMap);
 
-                                BehaviourInterpreter.staticVariables.humourCount-=10;
+                                BehaviourInterpreter.staticVariables.humourCount -= 10;
                                 if (BehaviourInterpreter.staticVariables.humourCount > 10)
                                     BehaviourInterpreter._instance.WaitAndExecute(() => revive.action());
                             }, null, null, revive.icon);
@@ -624,10 +641,27 @@ namespace Ankh
 
             public override void Destroy(DestroyMode mode = DestroyMode.Vanish)
             {
+                ReEnterBuildingDesignator();
+                base.Destroy(mode);
+            }
+
+            public override void DeSpawn()
+            {
+                ReEnterBuildingDesignator();
+                base.DeSpawn();
+            }
+
+            public override void Discard()
+            {
+                ReEnterBuildingDesignator();
+                base.Discard();
+            }
+
+            private void ReEnterBuildingDesignator()
+            {
                 List<Designator> resolved = (resolvedDesignatorInfo.GetValue(this.def.designationCategory) as List<Designator>);
                 resolved.Add(new Designator_Build(this.def));
                 resolvedDesignatorInfo.SetValue(this.def.designationCategory, resolved);
-                base.Destroy(mode);
             }
 
             public override string GetInspectString()
