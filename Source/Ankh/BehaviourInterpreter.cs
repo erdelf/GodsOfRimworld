@@ -146,30 +146,6 @@ namespace Ankh
                         if (Current.Game?.World?.info?.Seed != this.instanceVariableHolder.seed)
                             InitializeVariables();
 
-                        if (Find.TickManager.TicksGame / (GenDate.TicksPerDay) > this.instanceVariableHolder.lastTickTick / (GenDate.TicksPerDay))
-                        {
-                            List<Pawn> pawns = Find.ColonistBar.GetColonistsInOrder();
-
-                            pawns.Where(p => !p.Dead).ToList().ForEach(delegate (Pawn p)
-                            {
-                                if (!this.instanceVariableHolder.moodTracker.ContainsKey(p.NameStringShort))
-                                    this.instanceVariableHolder.moodTracker.Add(p.NameStringShort, 0f);
-                                this.instanceVariableHolder.moodTracker[p.NameStringShort] = p.needs.mood.CurInstantLevelPercentage;
-                            });
-
-                            pawns.Where(p => p.Dead && !this.instanceVariableHolder.deadWraths.Contains(p.NameStringShort)).ToList().ForEach(p =>
-                            {
-                                this.instanceVariableHolder.deadWraths.Add(p.NameStringShort);
-                                if (Rand.Value > 0.3)
-                                {
-                                    int scheduledFor = Mathf.RoundToInt(UnityEngine.Random.Range(0.0f, (float)GenDate.DaysPerSeason) * GenDate.TicksPerDay);
-                                    AddToScheduler(scheduledFor, "wrathCall", p.NameStringShort, p.gender.ToString());
-                                    Log.Message("Scheduled " + p.NameStringShort + "s wrath. Will happen in " + GenDate.TicksToDays(scheduledFor).ToString() + " days");
-                                }
-                            });
-                        }
-
-
                         if ((Find.TickManager.TicksGame / (GenDate.TicksPerHour / 8) > this.instanceVariableHolder.lastTickTick / (GenDate.TicksPerHour / 8)))
                         {
                             this.instanceVariableHolder.scheduler.Keys.Where(i => i < Find.TickManager.TicksGame).ToList().ForEach(i =>
@@ -198,49 +174,76 @@ namespace Ankh
                                         p.health.hediffSet.AddDirect(HediffMaker.MakeHediff(AnkhDefs.fiveKnuckleShuffleHediff, p));
                                 });
                             });
-                        }
-                        if ((Find.TickManager.TicksGame / (GenDate.TicksPerMonth) > this.instanceVariableHolder.lastTickTick / (GenDate.TicksPerMonth)) && Find.TickManager.TicksGame > 0)
-                            if (Find.ColonistBar.GetColonistsInOrder().Any(p => !p.Dead))
+
+
+                            if (Find.TickManager.TicksGame / (GenDate.TicksPerHour / 2) > this.instanceVariableHolder.lastTickTick / (GenDate.TicksPerHour / 2))
                             {
-                                AddToScheduler(5, "survivalReward");
-                            }
-                        //  Find.TickManager.TicksGame % (GenDate.TicksPerHour / 2) == 0
-
-                        if (Find.TickManager.TicksGame / (GenDate.TicksPerHour / 2) > this.instanceVariableHolder.lastTickTick / (GenDate.TicksPerHour / 2))
-                        {
-                            if(Rand.Bool)
-                            {
-                                Find.ColonistBar.GetColonistsInOrder().Where(p => !p.Dead && p.story.traits.HasTrait(AnkhDefs.teaAndScones)).ToList().ForEach(p =>
-                                {
-                                    int i = 2;
-
-                                    List<Hediff_Injury> hediffs = p.health.hediffSet.GetHediffs<Hediff_Injury>().Where(hi => !hi.IsOld()).ToList();
-                                    while (i > 0 && hediffs.Count > 0)
-                                    {
-                                        Hediff_Injury hediff = hediffs.First();
-                                        i -= Mathf.RoundToInt(hediff.Severity);
-                                        hediff.Heal(hediff.Severity + 1);
-                                        hediffs.Remove(hediff);
-                                    }
-                                });
-                            }
-
-                            List<string> curLog = UpdateLog();
-                            if (!this.log.NullOrEmpty())
-                                curLog.ForEach(
-                                    delegate (string s)
-                                    {
-                                        string[] split = s.Split(' ');
-                                        Log.Message(s);
-                                        if (split.Length == 5)
+                                List<string> curLog = UpdateLog();
+                                if (!this.log.NullOrEmpty())
+                                    curLog.ForEach(
+                                        delegate (string s)
                                         {
-                                            bool favor = split[1].ToLower().Equals("favor");
-                                            if (int.TryParse(split[3], out int points) && int.TryParse(split[4], out int cost))
-                                                if (points >= cost || split[0].EqualsIgnoreCase("itspladd") || split[0].EqualsIgnoreCase("erdelf") || (split[0].EqualsIgnoreCase("serphentalis") && points >= cost/2 ))
-                                                    AddToScheduler(favor || Find.TickManager.TicksGame > GenDate.TicksPerDay * 3 ? 1 : GenDate.TicksPerDay * 3 - Find.TickManager.TicksGame, "callTheGods", split[2].ToLower(), favor.ToString(), true.ToString());
+                                            string[] split = s.Split(' ');
+                                            Log.Message(s);
+                                            if (split.Length == 5)
+                                            {
+                                                bool favor = split[1].ToLower().Equals("favor");
+                                                if (int.TryParse(split[3], out int points) && int.TryParse(split[4], out int cost))
+                                                    if (points >= cost || split[0].EqualsIgnoreCase("itspladd") || split[0].EqualsIgnoreCase("erdelf") || (split[0].EqualsIgnoreCase("serphentalis") && points >= cost / 2))
+                                                        AddToScheduler(favor || Find.TickManager.TicksGame > GenDate.TicksPerDay * 3 ? 1 : GenDate.TicksPerDay * 3 - Find.TickManager.TicksGame, "callTheGods", split[2].ToLower(), favor.ToString(), true.ToString());
+                                            }
+                                        }
+                                    );
+
+                                if (Find.TickManager.TicksGame / GenDate.TicksPerHour > this.instanceVariableHolder.lastTickTick / GenDate.TicksPerHour)
+                                {
+                                    Find.ColonistBar.GetColonistsInOrder().Where(p => !p.Dead && p.story.traits.HasTrait(AnkhDefs.teaAndScones)).ToList().ForEach(p =>
+                                    {
+                                        int i = 2;
+
+                                        List<Hediff_Injury> hediffs = p.health.hediffSet.GetHediffs<Hediff_Injury>().Where(hi => !hi.IsOld()).ToList().ListFullCopy();
+                                        while (i > 0 && hediffs.Count > 0)
+                                        {
+                                            Hediff_Injury hediff = hediffs.First();
+                                            float val = Math.Min(hediff.Severity, i);
+                                            i -= Mathf.RoundToInt(val);
+                                            hediff.Heal(val);
+                                            hediffs.Remove(hediff);
+                                        }
+                                    });
+
+                                    if (Find.TickManager.TicksGame / (GenDate.TicksPerDay) > this.instanceVariableHolder.lastTickTick / (GenDate.TicksPerDay))
+                                    {
+                                        List<Pawn> pawns = Find.ColonistBar.GetColonistsInOrder();
+
+                                        pawns.Where(p => !p.Dead).ToList().ForEach(delegate (Pawn p)
+                                        {
+                                            if (!this.instanceVariableHolder.moodTracker.ContainsKey(p.NameStringShort))
+                                                this.instanceVariableHolder.moodTracker.Add(p.NameStringShort, 0f);
+                                            this.instanceVariableHolder.moodTracker[p.NameStringShort] = p.needs.mood.CurInstantLevelPercentage;
+                                        });
+
+                                        pawns.Where(p => p.Dead && !this.instanceVariableHolder.deadWraths.Contains(p.NameStringShort)).ToList().ForEach(p =>
+                                        {
+                                            this.instanceVariableHolder.deadWraths.Add(p.NameStringShort);
+                                            if (Rand.Value > 0.3)
+                                            {
+                                                int scheduledFor = Mathf.RoundToInt(UnityEngine.Random.Range(0.0f, (float)GenDate.DaysPerSeason) * GenDate.TicksPerDay);
+                                                AddToScheduler(scheduledFor, "wrathCall", p.NameStringShort, p.gender.ToString());
+                                                Log.Message("Scheduled " + p.NameStringShort + "s wrath. Will happen in " + GenDate.TicksToDays(scheduledFor).ToString() + " days");
+                                            }
+                                        });
+
+                                        if ((Find.TickManager.TicksGame / (GenDate.TicksPerMonth) > this.instanceVariableHolder.lastTickTick / (GenDate.TicksPerMonth)) && Find.TickManager.TicksGame > 0)
+                                        {
+                                            if (Find.ColonistBar.GetColonistsInOrder().Any(p => !p.Dead))
+                                            {
+                                                AddToScheduler(5, "survivalReward");
+                                            }
                                         }
                                     }
-                                );
+                                }
+                            }
                         }
                         
                         if (staticVariables.instaResearch > 0)
