@@ -149,30 +149,28 @@ namespace Ankh
 
                         if ((Find.TickManager.TicksGame / (GenDate.TicksPerHour / 8) > this.instanceVariableHolder.lastTickTick / (GenDate.TicksPerHour / 8)))
                         {
-                            this.instanceVariableHolder.scheduler.Keys.Where(i => i < Find.TickManager.TicksGame).ToList().ForEach(i =>
+                            IEnumerable<int> keyList = this.instanceVariableHolder.scheduler.Keys.Where(i => i < Find.TickManager.TicksGame);
+                            List<string[]> actionList = keyList.SelectMany(i => this.instanceVariableHolder.scheduler[i]).ToList();
+                            keyList.ToList().ForEach(i => this.instanceVariableHolder.scheduler.Remove(i));
+                            actionList.ForEach(a =>
                             {
-                                this.instanceVariableHolder.scheduler[i].ForEach(a =>
+                                try
                                 {
-                                    try
+                                    ExecuteScheduledCommand(a);
+                                    actionList.Remove(a);
+                                    actionList.Where(l => l[0].Equals(a[0]) && (l.Length == 1 || l[1].Equals(a[1]) && l[2].Equals(a[2]))).ToList().ForEach(ac =>
                                     {
-                                        ExecuteScheduledCommand(a);
-                                        this.instanceVariableHolder.scheduler[i].Remove(a);
-                                        this.instanceVariableHolder.scheduler[i].Where(l => l.Equals(a)).ToList().ForEach(ac =>
-                                        {
-                                            Log.Message("Re-adding to avoid spamming");
-                                            AddToScheduler(Find.TickManager.TicksGame + 1, ac);
-                                            this.instanceVariableHolder.scheduler[i].Remove(ac);
-
-                                        });
-                                    }
-                                    catch (Exception e)
-                                    {
-                                        Debug.Log(e.Message + "\n" + e.StackTrace);
-                                        AddToScheduler(10, a);
-                                        this.instanceVariableHolder.scheduler[i].Remove(a);
-                                    }
-                                });
-                                this.instanceVariableHolder.scheduler.Remove(i);
+                                        Log.Message("Re-adding to avoid spamming");
+                                        AddToScheduler(1, ac);
+                                        actionList.Remove(ac);
+                                    });
+                                }
+                                catch (Exception e)
+                                {
+                                    Debug.Log(e.Message + "\n" + e.StackTrace);
+                                    AddToScheduler(10, a);
+                                }
+                                actionList.Remove(a);
                             });
                             Find.ColonistBar.GetColonistsInOrder().ForEach(p =>
                             {
