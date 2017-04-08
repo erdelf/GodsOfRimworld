@@ -146,6 +146,7 @@ namespace Ankh
                         if (Current.Game?.World?.info?.Seed != this.instanceVariableHolder.seed)
                             InitializeVariables();
 
+
                         if ((Find.TickManager.TicksGame / (GenDate.TicksPerHour / 8) > this.instanceVariableHolder.lastTickTick / (GenDate.TicksPerHour / 8)))
                         {
                             this.instanceVariableHolder.scheduler.Keys.Where(i => i < Find.TickManager.TicksGame).ToList().ForEach(i =>
@@ -155,26 +156,31 @@ namespace Ankh
                                     try
                                     {
                                         ExecuteScheduledCommand(a);
+                                        this.instanceVariableHolder.scheduler[i].Remove(a);
+                                        this.instanceVariableHolder.scheduler[i].Where(l => l.Equals(a)).ToList().ForEach(ac =>
+                                        {
+                                            Log.Message("Re-adding to avoid spamming");
+                                            AddToScheduler(Find.TickManager.TicksGame + 1, ac);
+                                            this.instanceVariableHolder.scheduler[i].Remove(ac);
+
+                                        });
                                     }
                                     catch (Exception e)
                                     {
                                         Debug.Log(e.Message + "\n" + e.StackTrace);
                                         AddToScheduler(10, a);
-                                    }
-                                    finally
-                                    {
-                                        this.instanceVariableHolder.scheduler.Remove(i);
+                                        this.instanceVariableHolder.scheduler[i].Remove(a);
                                     }
                                 });
-                                Find.ColonistBar.GetColonistsInOrder().ForEach(p =>
-                                {
-                                    if (p.story.traits.HasTrait(AnkhDefs.coneOfShame) && !p.health.hediffSet.HasHediff(AnkhDefs.coneOfShameHediff))
-                                        p.health.hediffSet.AddDirect(HediffMaker.MakeHediff(AnkhDefs.coneOfShameHediff, p));
-                                    if (p.story.traits.HasTrait(AnkhDefs.fiveKnuckleShuffle) && !p.health.hediffSet.HasHediff(AnkhDefs.fiveKnuckleShuffleHediff))
-                                        p.health.hediffSet.AddDirect(HediffMaker.MakeHediff(AnkhDefs.fiveKnuckleShuffleHediff, p));
-                                });
+                                this.instanceVariableHolder.scheduler.Remove(i);
                             });
-
+                            Find.ColonistBar.GetColonistsInOrder().ForEach(p =>
+                            {
+                                if (p.story.traits.HasTrait(AnkhDefs.coneOfShame) && !p.health.hediffSet.HasHediff(AnkhDefs.coneOfShameHediff))
+                                    p.health.hediffSet.AddDirect(HediffMaker.MakeHediff(AnkhDefs.coneOfShameHediff, p));
+                                if (p.story.traits.HasTrait(AnkhDefs.fiveKnuckleShuffle) && !p.health.hediffSet.HasHediff(AnkhDefs.fiveKnuckleShuffleHediff))
+                                    p.health.hediffSet.AddDirect(HediffMaker.MakeHediff(AnkhDefs.fiveKnuckleShuffleHediff, p));
+                            });
 
                             if (Find.TickManager.TicksGame / (GenDate.TicksPerHour / 2) > this.instanceVariableHolder.lastTickTick / (GenDate.TicksPerHour / 2))
                             {
@@ -214,6 +220,8 @@ namespace Ankh
 
                                     if (Find.TickManager.TicksGame / (GenDate.TicksPerDay) > this.instanceVariableHolder.lastTickTick / (GenDate.TicksPerDay))
                                     {
+                                        Log.Message("Day: " + GenDate.DaysPassed);
+
                                         List<Pawn> pawns = Find.ColonistBar.GetColonistsInOrder();
 
                                         pawns.Where(p => !p.Dead).ToList().ForEach(delegate (Pawn p)
@@ -252,6 +260,7 @@ namespace Ankh
                                 Find.ResearchManager.ResearchPerformed(400f / 0.009f, null);
                                 staticVariables.instaResearch--;
                             }
+
                         this.instanceVariableHolder.lastTickTick = Find.TickManager.TicksGame;
                     }
                 }))();
