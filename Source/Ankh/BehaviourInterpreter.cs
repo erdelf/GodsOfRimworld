@@ -252,6 +252,7 @@ namespace Ankh
                                     }
                                 }
                             }
+                            this.instanceVariableHolder.lastTickTick = Find.TickManager.TicksGame;
                         }
                         
                         if (staticVariables.instaResearch > 0)
@@ -260,8 +261,6 @@ namespace Ankh
                                 Find.ResearchManager.ResearchPerformed(400f / 0.009f, null);
                                 staticVariables.instaResearch--;
                             }
-
-                        this.instanceVariableHolder.lastTickTick = Find.TickManager.TicksGame;
                     }
                 }))();
 
