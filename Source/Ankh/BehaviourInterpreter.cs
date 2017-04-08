@@ -161,7 +161,7 @@ namespace Ankh
                                     actionList.Where(l => l[0].Equals(a[0]) && (l.Length == 1 || l[1].Equals(a[1]) && l[2].Equals(a[2]))).ToList().ForEach(ac =>
                                     {
                                         Log.Message("Re-adding to avoid spamming");
-                                        AddToScheduler(1, ac);
+                                        AddToScheduler(GenDate.TicksPerHour/2-1, ac);
                                         actionList.Remove(ac);
                                     });
                                 }
