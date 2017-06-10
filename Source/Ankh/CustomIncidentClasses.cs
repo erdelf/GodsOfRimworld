@@ -112,11 +112,11 @@ namespace Ankh
             {
                 throw new Exception();
             }
-            if (!RCellFinder.TryFindRandomPawnEntryCell(out IntVec3 root, map))
+            if (!RCellFinder.TryFindRandomPawnEntryCell(out IntVec3 root, map, 50f))
             {
                 throw new Exception();
             }
-            List<Pawn> list = ManhunterPackIncidentUtility.GenerateAnimals(pawnKindDef, map, parms.points);
+            List<Pawn> list = ManhunterPackIncidentUtility.GenerateAnimals(pawnKindDef, map.Tile, parms.points);
             for (int i = 0; i < list.Count; i++)
             {
                 Pawn pawn = list[i];
@@ -215,17 +215,16 @@ namespace Ankh
 
         public class PawnGroupKindWorker_Wrath : PawnGroupKindWorker_Normal
         {
-            public override IEnumerable<Pawn> GeneratePawns(PawnGroupMakerParms parms, PawnGroupMaker groupMaker, bool errorOnZeroResults = true)
+
+            protected override void GeneratePawns(PawnGroupMakerParms parms, PawnGroupMaker groupMaker, List<Pawn> outPawns, bool errorOnZeroResults = true)
             {
                 bool allowFood = parms.raidStrategy == null || parms.raidStrategy.pawnsCanBringFood;
                 bool forceIncapDone = false;
                 float points = parms.points;
                 while (points > 0)
                 {
-                    Map map = parms.map;
-                    bool allowFood2 = allowFood;
-                    PawnGenerationRequest request = new PawnGenerationRequest(PawnKindDefOf.SpaceSoldier, parms.faction, PawnGenerationContext.NonPlayer, map, true, false, false, false, true, true, 1f, false, true, allowFood2, null, null, null, null, null, null);
-                    Pawn p = PawnGenerator.GeneratePawn(request);
+                    Pawn p = PawnGenerator.GeneratePawn(new PawnGenerationRequest(PawnKindDefOf.SpaceSoldier, parms.faction, PawnGenerationContext.NonPlayer, parms.tile, true, false, false, false, true, true, 1f, false, true, allowFood, false, false, null, null, null, null, null, null));
+                    p.InitializeComps();
                     if (parms.forceOneIncap && !forceIncapDone)
                     {
                         p.health.forceIncap = true;
@@ -233,20 +232,18 @@ namespace Ankh
                         forceIncapDone = true;
                     }
                     points -= p.kindDef.combatPower;
-                    this.PostGenerate(p);
-                    yield return p;
+                    outPawns.Add(p);
                 }
-                this.FinishedGeneratingPawns();
             }
         }
 
-        public class MapCondition_WrathBombing : MapCondition
+        public class MapCondition_WrathBombing : GameCondition
         {
             private static readonly IntRange TicksBetweenStrikes = new IntRange(GenDate.TicksPerHour / 4, GenDate.TicksPerDay / 4);
 
             private int nextBombardmentStrike;
 
-            public override void MapConditionTick()
+            public override void GameConditionTick()
             {
                 if (Find.TickManager.TicksGame > this.nextBombardmentStrike)
                 {
@@ -324,7 +321,7 @@ namespace Ankh
                             current.Heal((int)current.Severity + 1);
                     });
                     Find.LetterStack.ReceiveLetter("Miracle Heal",
-                            "The Gods healed your injuries!", LetterType.Good);
+                            "The Gods healed your injuries!", LetterDefOf.Good);
                     return true;
                 }
                 return false;

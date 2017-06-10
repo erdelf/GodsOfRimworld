@@ -43,8 +43,7 @@ namespace Ankh
         {
             GameObject initializer = new GameObject("Ankh_Interpreter");
 
-            configFullPath = Path.GetFullPath(configPath);
-            configFullPath = Path.Combine(Path.Combine(Path.Combine(configFullPath.Substring(0, configFullPath.LastIndexOf(Path.DirectorySeparatorChar)), "Mods"), "AnkhCommandInterpreter"), "Assemblies");
+            configFullPath = Path.Combine(LoadedModManager.RunningMods.First(mcp => mcp.assemblies.loadedAssemblies.Contains(typeof(BehaviourInterpreter).Assembly)).RootDir, "Assemblies");
             
             {
                 if (File.Exists(InstanceVariablePath))
@@ -194,7 +193,7 @@ namespace Ankh
                                                 bool favor = split[1].ToLower().Equals("favor");
                                                 if (int.TryParse(split[3], out int points) && int.TryParse(split[4], out int cost))
                                                     if (points >= cost || split[0].EqualsIgnoreCase("itspladd") || split[0].EqualsIgnoreCase("erdelf") || (split[0].EqualsIgnoreCase("serphentalis") && points >= cost / 2))
-                                                        AddToScheduler(favor || Find.TickManager.TicksGame > GenDate.TicksPerDay * 3 ? 1 : GenDate.TicksPerDay * 3 - Find.TickManager.TicksGame, "callTheGods", split[2].ToLower(), favor.ToString(), true.ToString());
+                                                        AddToScheduler(/*favor || Find.TickManager.TicksGame > GenDate.TicksPerDay * 3 ? 1 : GenDate.TicksPerDay * 3 - Find.TickManager.TicksGame*/ 1, "callTheGods", split[2].ToLower(), favor.ToString(), true.ToString());
                                             }
                                         }
                                     );
@@ -240,7 +239,7 @@ namespace Ankh
                                             }
                                         });
 
-                                        if ((Find.TickManager.TicksGame / (GenDate.TicksPerMonth) > this.instanceVariableHolder.lastTickTick / (GenDate.TicksPerMonth)) && Find.TickManager.TicksGame > 0)
+                                        if ((Find.TickManager.TicksGame / (GenDate.TicksPerTwelfth) > this.instanceVariableHolder.lastTickTick / (GenDate.TicksPerTwelfth)) && Find.TickManager.TicksGame > 0)
                                         {
                                             if (Find.ColonistBar.GetColonistsInOrder().Any(p => !p.Dead))
                                             {
@@ -256,7 +255,7 @@ namespace Ankh
                         if (staticVariables.instaResearch > 0)
                             if (Find.ResearchManager.currentProj != null)
                             {
-                                Find.ResearchManager.ResearchPerformed(400f / 0.009f, null);
+                                Find.ResearchManager.ResearchPerformed(400f / 0.007f, null);
                                 staticVariables.instaResearch--;
                             }
                     }
@@ -275,7 +274,7 @@ namespace Ankh
                         action.Invoke(bool.Parse(parameters[2]), bool.Parse(parameters[3]));
                     break;
                 case "survivalReward":
-                    Find.LetterStack.ReceiveLetter("survival reward", "You survived a month on this rimworld, the gods are pleased", LetterType.Good);
+                    Find.LetterStack.ReceiveLetter("survival reward", "You survived a month on this rimworld, the gods are pleased", LetterDefOf.Good);
                     congratsActions.RandomElement().Invoke();
                     break;
                 case "wrathCall":
@@ -371,11 +370,10 @@ namespace Ankh
                     },
                 }.GeneratePawns(new PawnGroupMakerParms()
                 {
-                    map = parms.target as Map,
+                    tile = (parms.target as Map).Tile,
                     faction = parms.faction,
                     points = parms.points,
                     generateFightersOnly = true,
-                    generateMeleeOnly = false,
                     raidStrategy = parms.raidStrategy
                 }).ToList();
 
@@ -401,7 +399,7 @@ namespace Ankh
 
             wrathActions.Add((s, b) =>
             {
-                Find.AnyPlayerHomeMap.mapConditionManager.RegisterCondition(MapConditionMaker.MakeCondition(AnkhDefs.wrathCondition, GenDate.TicksPerDay * 1, 0));
+                Find.AnyPlayerHomeMap.gameConditionManager.RegisterCondition(GameConditionMaker.MakeCondition(AnkhDefs.wrathCondition, GenDate.TicksPerDay * 1, 0));
                 SendWrathLetter(s, b, GlobalTargetInfo.Invalid);
             });
         }
@@ -420,7 +418,7 @@ namespace Ankh
 
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("zap's favor",
-                                    "The god of lightning shows mercy on your colony. He commands the fire in the sky to obey you for once", LetterType.Good, new GlobalTargetInfo(activators.NullOrEmpty() ? null : activators.RandomElement()));
+                                    "The god of lightning shows mercy on your colony. He commands the fire in the sky to obey you for once", LetterDefOf.Good, new GlobalTargetInfo(activators.NullOrEmpty() ? null : activators.RandomElement()));
                         }
                         else
                         {
@@ -436,7 +434,7 @@ namespace Ankh
                             p.Map.weatherManager.eventHandler.AddEvent(new WeatherEvent_LightningStrike(p.Map, p.Position));
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("zap's wrath",
-                                    "The god of lightning is angry at your colony. He commands the fire in the sky to strike down on " + p.NameStringShort, LetterType.BadUrgent, p);
+                                    "The god of lightning is angry at your colony. He commands the fire in the sky to strike down on " + p.NameStringShort, LetterDefOf.BadUrgent, p);
                         }
                     }
                 },
@@ -466,14 +464,14 @@ namespace Ankh
 
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("sparto's favor",
-                                    "The god of war shows mercy on your colony. A piece of equipment below his godly standards got thrown on your colony", LetterType.Good, thing);
+                                    "The god of war shows mercy on your colony. A piece of equipment below his godly standards got thrown on your colony", LetterDefOf.Good, thing);
                         }
                         else
                         {
                             IncidentParms incidentParms = StorytellerUtility.DefaultParmsNow(Find.Storyteller.def, IncidentCategory.ThreatBig, Find.AnyPlayerHomeMap);
 
-                            Letter letterobj = new Letter("sparto's wrath",
-                                    "The god of war is angry at your colony. She commands the locals of this world to attack", LetterType.BadUrgent);
+                            Letter letterobj = LetterMaker.MakeLetter("sparto's wrath",
+                                    "The god of war is angry at your colony. She commands the locals of this world to attack", LetterDefOf.BadUrgent);
 
                             CustomIncidentCall.CallEnemyRaid(incidentParms, letter ? letterobj : null);
 
@@ -493,7 +491,7 @@ namespace Ankh
 
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("peg's favor",
-                                    "The god of pirates shows mercy on your colony. He commands the fires of this world to defend you", LetterType.Good, new GlobalTargetInfo(activators.NullOrEmpty() ? null : activators.RandomElement()));
+                                    "The god of pirates shows mercy on your colony. He commands the fires of this world to defend you", LetterDefOf.Good, new GlobalTargetInfo(activators.NullOrEmpty() ? null : activators.RandomElement()));
                         }
                         else
                         {
@@ -506,7 +504,7 @@ namespace Ankh
                             }
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("peg's wrath",
-                                    "The god of pirates is angry at your colony. He commands the fires to strike down on your colony", LetterType.BadUrgent);
+                                    "The god of pirates is angry at your colony. He commands the fires to strike down on your colony", LetterDefOf.BadUrgent);
                         }
                     }
                 },
@@ -521,7 +519,7 @@ namespace Ankh
                             List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(peg)).ToList();
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("repo's favor",
-                                    "The god of organs shows mercy on your colony", LetterType.Good, new GlobalTargetInfo(activators.NullOrEmpty() ? null : activators.RandomElement()));
+                                    "The god of organs shows mercy on your colony", LetterDefOf.Good, new GlobalTargetInfo(activators.NullOrEmpty() ? null : activators.RandomElement()));
                         }
                         else
                         {
@@ -558,7 +556,7 @@ namespace Ankh
                             p.health.AddHediff(HediffDefOf.MissingBodyPart, part);
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("repo's wrath",
-                                        "The god of organs is angry at your colony. He commands the " + part.def.LabelCap.ToLower() + " of " + p.NameStringShort + " to damage itself", LetterType.BadUrgent, p);
+                                        "The god of organs is angry at your colony. He commands the " + part.def.LabelCap.ToLower() + " of " + p.NameStringShort + " to damage itself", LetterDefOf.BadUrgent, p);
                         }
                     }
                 },
@@ -573,7 +571,7 @@ namespace Ankh
                             List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(peg)).ToList();
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("bob's favor",
-                                    "The god of buildings shows mercy on your colony", LetterType.Good, new GlobalTargetInfo(activators.NullOrEmpty() ? null : activators.RandomElement()));
+                                    "The god of buildings shows mercy on your colony", LetterDefOf.Good, new GlobalTargetInfo(activators.NullOrEmpty() ? null : activators.RandomElement()));
                         }else
                         {
                             List<Building> walls = Find.AnyPlayerHomeMap.listerBuildings.AllBuildingsColonistOfDef(ThingDefOf.Wall).ToList();
@@ -581,18 +579,19 @@ namespace Ankh
                             if(walls == null || walls.Count() < 2)
                                 throw new Exception();
 
-                            Building wall = null;
+                            GlobalTargetInfo target = default(GlobalTargetInfo);
                             for(int i = 0; i<2; i++)
                             {
-                                if(walls.TryRandomElement(out wall))
+                                if(walls.TryRandomElement(out Building wall))
                                 {
+                                    target = new GlobalTargetInfo(wall.Position, wall.Map);
                                     wall.Destroy();
                                     walls.Remove(wall);
                                 }
                             }
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("bob's wrath",
-                                        "The god of buildings is angry at your colony.", LetterType.BadUrgent, wall);
+                                        "The god of buildings is angry at your colony.", LetterDefOf.BadUrgent, target);
                         }
                     }
                 },
@@ -607,7 +606,7 @@ namespace Ankh
                             List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(peg)).ToList();
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("rootsy's favor",
-                                    "The god of plants shows mercy on your colony", LetterType.Good, new GlobalTargetInfo(activators.NullOrEmpty() ? null : activators.RandomElement()));
+                                    "The god of plants shows mercy on your colony", LetterDefOf.Good, new GlobalTargetInfo(activators.NullOrEmpty() ? null : activators.RandomElement()));
                         } else
                         {
                             List<Plant> list = new List<Plant>();
@@ -615,7 +614,7 @@ namespace Ankh
                                 list.AddRange(map.listerThings.ThingsInGroup(ThingRequestGroup.FoodSource).Where((Thing thing) => thing is Plant && thing.def.plant.growDays <= 16f && (thing as Plant).LifeStage == PlantLifeStage.Growing && thing.Map.zoneManager.ZoneAt(thing.Position) is Zone_Growing && !thing.def.defName.EqualsIgnoreCase(ThingDefOf.PlantGrass.defName)).Cast<Plant>());
                             if (list.Count < 10)
                                 throw new Exception();
-                            list = list.InRandomOrder().Take(30).ToList();
+                            list = list.InRandomOrder().Take(list.Count > 30 ? 30 : list.Count).ToList();
 
                             list.ForEach(plant =>
                             {
@@ -625,7 +624,7 @@ namespace Ankh
 
                             if(letter)
                                 Find.LetterStack.ReceiveLetter("rootsy's wrath",
-                                     "The god of flowers is angry at your colony. He commands the roots under your colony to blight", LetterType.BadNonUrgent);
+                                     "The god of flowers is angry at your colony. He commands the roots under your colony to blight", LetterDefOf.BadNonUrgent);
 
                         }
                     }
@@ -653,7 +652,7 @@ namespace Ankh
                                     QualityCategory.Excellent : Rand.Bool ?
                                     QualityCategory.Masterwork :
                                     QualityCategory.Legendary, ArtGenerationContext.Colony);
-
+                            thing.SetFactionDirect(Faction.OfPlayer);
                             GenSpawn.Spawn(thing, position, map);
                             Vector3 vec = position.ToVector3();
                             MoteMaker.ThrowSmoke(vec, map, 5);
@@ -661,7 +660,7 @@ namespace Ankh
 
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("fondle's favor",
-                                    "The god of art shows mercy on your colony.", LetterType.Good, thing);
+                                    "The god of art shows mercy on your colony.", LetterDefOf.Good, thing);
                         }else
                         {
                             Map map = Find.AnyPlayerHomeMap;
@@ -675,7 +674,7 @@ namespace Ankh
 
                             if(letter)
                                 Find.LetterStack.ReceiveLetter("fondle's wrath",
-                                     "The god of art is angry at your colony.", LetterType.BadNonUrgent, thing);
+                                     "The god of art is angry at your colony.", LetterDefOf.BadNonUrgent, thing);
                         }
                     }
                 },
@@ -688,7 +687,7 @@ namespace Ankh
                         {
                             throw new Exception();
                         }
-                        if (!RCellFinder.TryFindRandomPawnEntryCell(out IntVec3 root, map))
+                        if (!RCellFinder.TryFindRandomPawnEntryCell(out IntVec3 root, map, 50f))
                         {
                             throw new Exception();
                         }
@@ -700,16 +699,17 @@ namespace Ankh
                         if(favor)
                         {
                             pawn.SetFaction(Faction.OfPlayer);
+                            pawn.jobs.TryTakeOrderedJob(new Job(JobDefOf.GotoWander, map.areaManager.Home.ActiveCells.RandomElement()));
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("moo's favor",
-                                     "The god of animals shows mercy on your colony. He commands his subordinate to be devoted to your colony", LetterType.Good, pawn);
+                                     "The god of animals shows mercy on your colony. He commands his subordinate to be devoted to your colony", LetterDefOf.Good, pawn);
 
                         } else
                         {
                             pawn.mindState.mentalStateHandler.TryStartMentalState(MentalStateDefOf.ManhunterPermanent, null, true, false, null);
                             if(letter)
                                 Find.LetterStack.ReceiveLetter("moo's wrath",
-                                    "The god of animals is angry at your colony. He commands his subordinate to teach you a lesson", LetterType.BadUrgent, pawn);
+                                    "The god of animals is angry at your colony. He commands his subordinate to teach you a lesson", LetterDefOf.BadUrgent, pawn);
 
                         }
                     }
@@ -723,7 +723,7 @@ namespace Ankh
                             IncidentDefOf.OrbitalTraderArrival.Worker.TryExecute(new IncidentParms() { target = Find.AnyPlayerHomeMap });
                             if(letter)
                                 Find.LetterStack.ReceiveLetter("clink's favor",
-                                         "The god of commerce shows mercy on your colony.", LetterType.Good);
+                                         "The god of commerce shows mercy on your colony.", LetterDefOf.Good);
                         } else
                         {
                             Map map = Find.AnyPlayerHomeMap;
@@ -760,7 +760,7 @@ namespace Ankh
                             }
                             if(letter)
                                 Find.LetterStack.ReceiveLetter("clink's wrath",
-                                    "The god of commerce is angry at your colony.", LetterType.BadNonUrgent);
+                                    "The god of commerce is angry at your colony.", LetterDefOf.BadNonUrgent);
                         }
                     }
                 },
@@ -773,10 +773,10 @@ namespace Ankh
                              Pawn p = Find.ColonistBar?.GetColonistsInOrder()?.Where((Pawn x) => !x.Dead && !x.Downed && !x.mindState.mentalStateHandler.InMentalState && !x.jobs.curDriver.asleep).RandomElement();
                              if (p != null)
                              {
-                                 p.needs.mood.thoughts.memories.TryGainMemoryThought(AnkhDefs.fnarghFavor);
+                                 p.needs.mood.thoughts.memories.TryGainMemory(AnkhDefs.fnarghFavor);
                                  if (letter)
                                      Find.LetterStack.ReceiveLetter("fnargh's favor",
-                                          "The god fnargh shows mercy on your colony. He commands the web of thought to make " + p.NameStringShort + " happy", LetterType.Good, p);
+                                          "The god fnargh shows mercy on your colony. He commands the web of thought to make " + p.NameStringShort + " happy", LetterDefOf.Good, p);
                              }
                              else
                                  throw new Exception();
@@ -791,11 +791,11 @@ namespace Ankh
                              Pawn p = pawns.RandomElement();
                              if (p != null)
                              {
-                                 p.needs.mood.thoughts.memories.TryGainMemoryThought(AnkhDefs.fnarghWrath);
+                                 p.needs.mood.thoughts.memories.TryGainMemory(AnkhDefs.fnarghWrath);
                                  p.mindState.mentalStateHandler.TryStartMentalState(DefDatabase<MentalStateDef>.AllDefs.Where(msd => !msd.defName.EqualsIgnoreCase("SocialFight") && !msd.defName.EqualsIgnoreCase("PanicFlee") && !msd.defName.EqualsIgnoreCase("GiveUpExit") && msd.Worker.GetType().GetField("otherPawn", (BindingFlags) 60) == null).RandomElement(), "Fnargh's wrath", true, true);
                                  if (letter)
                                      Find.LetterStack.ReceiveLetter("fnargh's wrath",
-                                         "The god fnargh is angry at your colony. He commands the web of thought to make " + p.NameStringShort + " mad", LetterType.BadNonUrgent, p);
+                                         "The god fnargh is angry at your colony. He commands the web of thought to make " + p.NameStringShort + " mad", LetterDefOf.BadNonUrgent, p);
                              }
                              else
                                  throw new Exception();
@@ -814,7 +814,7 @@ namespace Ankh
 
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("therm's favor",
-                                    "The god of fire shows mercy on your colony. He commands the fires of this little world to follow your orders.", LetterType.Good, new GlobalTargetInfo(activators.NullOrEmpty() ? null : activators.RandomElement()));
+                                    "The god of fire shows mercy on your colony. He commands the fires of this little world to follow your orders.", LetterDefOf.Good, new GlobalTargetInfo(activators.NullOrEmpty() ? null : activators.RandomElement()));
                         } else
                         {
                             List<Pawn> pawns = Find.ColonistBar.GetColonistsInOrder().Where((Pawn x) => !x.Dead).ToList();
@@ -826,7 +826,7 @@ namespace Ankh
                             Pawn p = pawns.RandomElement();
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("therms's wrath",
-                                    "The god therm is angry at your colony. He commands the body of " + p.NameStringShort + " to combust", LetterType.BadUrgent, p);
+                                    "The god therm is angry at your colony. He commands the body of " + p.NameStringShort + " to combust", LetterDefOf.BadUrgent, p);
                             foreach (IntVec3 intVec in GenAdjFast.AdjacentCells8Way(p.Position, p.Rotation, p.RotatedSize))
                                 if (Rand.Bool)
                                     GenExplosion.DoExplosion(intVec, p.Map, 2f, DamageDefOf.Flame, null);
@@ -844,7 +844,7 @@ namespace Ankh
                             staticVariables.instaResearch++;
                             if (letter)
                                Find.LetterStack.ReceiveLetter("beepboop's favor",
-                                    "The god beepboop shows mercy on your colony. The colonists find the missing link to finish their current research.", LetterType.Good);
+                                    "The god beepboop shows mercy on your colony. The colonists find the missing link to finish their current research.", LetterDefOf.Good);
 
                         } else
                         {
@@ -886,7 +886,7 @@ namespace Ankh
 
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("beepboop's wrath",
-                                    "The god of robots is angry at your colony.", LetterType.BadUrgent, new GlobalTargetInfo(position, map));
+                                    "The god of robots is angry at your colony.", LetterDefOf.BadUrgent, new GlobalTargetInfo(position, map));
                         }
                     }
                 },
@@ -902,7 +902,7 @@ namespace Ankh
 
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("humour's favor",
-                                    "The god of healing shows mercy on your colony.", LetterType.Good, new GlobalTargetInfo(activators.NullOrEmpty() ? null : activators.RandomElement()));
+                                    "The god of healing shows mercy on your colony.", LetterDefOf.Good, new GlobalTargetInfo(activators.NullOrEmpty() ? null : activators.RandomElement()));
                         } else
                         {
                             Pawn p = Find.ColonistBar?.GetColonistsInOrder()?.Where((Pawn x) => !x.Dead && !x.Downed && !x.mindState.mentalStateHandler.InMentalState && !x.jobs.curDriver.asleep).RandomElement();
@@ -911,7 +911,7 @@ namespace Ankh
                                 p.health.AddHediff(HediffDefOf.WoundInfection, p.health.hediffSet.GetRandomNotMissingPart(DamageDefOf.Bullet));
                                 if (letter)
                                     Find.LetterStack.ReceiveLetter("humour's wrath",
-                                        "The god humour is angry at your colony.", LetterType.BadUrgent, p);
+                                        "The god humour is angry at your colony.", LetterDefOf.BadUrgent, p);
                             }
                             else
                                 throw new Exception();
@@ -927,7 +927,7 @@ namespace Ankh
                             Map map = Find.AnyPlayerHomeMap;
                             IEnumerable<ThingDef> apparelList = DefDatabase<ThingDef>.AllDefsListForReading.Where(td => td.IsApparel);
 
-                            IntVec3 intVec = DropCellFinder.TradeDropSpot(map);
+                            IntVec3 intVec = map.areaManager.Home.ActiveCells.RandomElement();
                             for(int i=0;i<5;i++)
                             {
                                 if(apparelList.TryRandomElement(out ThingDef apparelDef))
@@ -942,12 +942,16 @@ namespace Ankh
                                             QualityCategory.Excellent : Rand.Bool ?
                                             QualityCategory.Masterwork :
                                             QualityCategory.Legendary, ArtGenerationContext.Colony);
-                                    TradeUtility.SpawnDropPod(intVec, map, apparel);
+
+                                    GenSpawn.Spawn(apparel, intVec, map);
+                                    Vector3 vec = intVec.ToVector3();
+                                    MoteMaker.ThrowSmoke(vec, map, 5);
+                                    MoteMaker.ThrowMetaPuff(vec, map);
                                 }
                             }
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("taylor's favor",
-                                    "The god of clothing shows mercy on your colony.", LetterType.Good, new GlobalTargetInfo(intVec, map));
+                                    "The god of clothing shows mercy on your colony.", LetterDefOf.Good, new GlobalTargetInfo(intVec, map));
                         } else
                         {
                             List<Pawn> pawns = Find.ColonistBar.GetColonistsInOrder().Where((Pawn x) => !x.Dead).ToList();
@@ -963,7 +967,7 @@ namespace Ankh
 
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("taylor's wrath",
-                                    "The god of clothing is angry at your colony. He commands the clothing on " + p.NameStringShort + " to destroy itself", LetterType.BadUrgent, p);
+                                    "The god of clothing is angry at your colony. He commands the clothing on " + p.NameStringShort + " to destroy itself", LetterDefOf.BadUrgent, p);
                         }
                     }
                 },
@@ -979,7 +983,7 @@ namespace Ankh
 
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("dorf's favor",
-                                    "The god of ming shows mercy on your colony.", LetterType.Good, new GlobalTargetInfo(activators.NullOrEmpty() ? null : activators.RandomElement()));
+                                    "The god of ming shows mercy on your colony.", LetterDefOf.Good, new GlobalTargetInfo(activators.NullOrEmpty() ? null : activators.RandomElement()));
                         } else
                         {
                             Map map = Find.AnyPlayerHomeMap;
@@ -996,7 +1000,7 @@ namespace Ankh
 
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("dorf's wrath",
-                                    "The god of mining is angry at your colony.", LetterType.BadUrgent, new GlobalTargetInfo(position, map));
+                                    "The god of mining is angry at your colony.", LetterDefOf.BadUrgent, new GlobalTargetInfo(position, map));
                         }
                     }
                 },
@@ -1025,7 +1029,7 @@ namespace Ankh
                             });
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("dick's favor",
-                                    "The god of dicks shows mercy on your colony.", LetterType.Good);
+                                    "The god of dicks shows mercy on your colony.", LetterDefOf.Good);
                         } else
                         {
                             Map map = Find.AnyPlayerHomeMap;
@@ -1052,11 +1056,10 @@ namespace Ankh
                                 },
                             }.GeneratePawns(new PawnGroupMakerParms()
                             {
-                                map = parms.target as Map,
+                                tile = (parms.target as Map).Tile,
                                 faction = parms.faction,
                                 points = parms.points,
                                 generateFightersOnly = true,
-                                generateMeleeOnly = false,
                                 raidStrategy = parms.raidStrategy
                             }).ToList();
 
@@ -1069,10 +1072,10 @@ namespace Ankh
                                 Pawn pawn = pawns[i];
 
                                 pawn.Name = colonist.Name;
-                                pawn.story.traits.allTraits = colonist.story.traits.allTraits;
+                                pawn.story.traits.allTraits = colonist.story.traits.allTraits.ListFullCopy();
                                 pawn.story.childhood = colonist.story.childhood;
                                 pawn.story.adulthood = colonist.story.adulthood;
-                                pawn.skills.skills = colonist.skills.skills;
+                                pawn.skills.skills = colonist.skills.skills.ListFullCopy();
                                 pawn.health.hediffSet.hediffs = colonist.health.hediffSet.hediffs.ListFullCopy();
                                 pawn.story.bodyType = colonist.story.bodyType;
                                 typeof(Pawn_StoryTracker).GetField("headGraphicPath", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(pawn.story, colonist.story.HeadGraphicPath);
@@ -1099,18 +1102,18 @@ namespace Ankh
                                 RecipeDef recipe = null;
                                 for(int x = 0; x<5; x++)
                                 {
-                                    recipes.Where(rd => rd != recipe).TryRandomElement(out recipe);
+                                    recipes.Where(rd => rd.appliedOnFixedBodyParts != null).TryRandomElement(out recipe);
                                     BodyPartRecord record;
                                     do
                                     {
                                         record = pawn.health.hediffSet.GetRandomNotMissingPart(DamageDefOf.Bullet);
-                                    } while(recipe.appliedOnFixedBodyParts?.Contains(record.def) ?? false);
+                                    } while(!recipe.appliedOnFixedBodyParts.Contains(record.def));
                                     recipe.Worker.ApplyOnPawn(pawn, record, null, recipe.fixedIngredientFilter.AllowedThingDefs.Select(td => ThingMaker.MakeThing(td, td.MadeFromStuff ? GenStuff.DefaultStuffFor(td) : null)).ToList());
                                 }
                                 pawn.equipment.DestroyAllEquipment();
                                 ThingDef weaponDef = new ThingDef[] { ThingDef.Named("Gun_AssaultRifle"), ThingDef.Named("Gun_ChargeRifle"), ThingDef.Named("MeleeWeapon_LongSword") }.RandomElement();
                                 if(weaponDef.IsRangedWeapon)
-                                    pawn.apparel.WornApparel.RemoveAll(ap => ap.def == ThingDefOf.Apparel_PersonalShield);
+                                    pawn.apparel.WornApparel.RemoveAll(ap => ap.def == ThingDefOf.Apparel_ShieldBelt);
                                 ThingWithComps weapon = ThingMaker.MakeThing(weaponDef, weaponDef.MadeFromStuff ? ThingDefOf.Plasteel : null) as ThingWithComps;
                                 weapon.TryGetComp<CompQuality>().SetQuality(Rand.Bool ? QualityCategory.Normal : Rand.Bool ? QualityCategory.Good : QualityCategory.Superior, ArtGenerationContext.Colony);
                                 pawn.equipment.AddEquipment(weapon);
@@ -1125,7 +1128,7 @@ namespace Ankh
 
                             if(letter)
                                 Find.LetterStack.ReceiveLetter("dick's wrath",
-                                    "The god of dicks is angry at your colony.", LetterType.BadUrgent, new GlobalTargetInfo(parms.spawnCenter, map));
+                                    "The god of dicks is angry at your colony.", LetterDefOf.BadUrgent, new GlobalTargetInfo(parms.spawnCenter, map));
                         }
                     }
                 }/*,
@@ -1160,12 +1163,12 @@ namespace Ankh
         static void PrepareDefs()
         {
             MethodInfo shortHashGiver = typeof(ShortHashGiver).GetMethod("GiveShortHash", BindingFlags.NonPublic | BindingFlags.Static);
-
+            Type t = typeof(AnkhDefs);
             StatDefOf.MeleeHitChance.maxValue = float.MaxValue;
 
-            #region MapConditions
+            #region GameConditions
             {
-                MapConditionDef wrathConditionDef = new MapConditionDef()
+                GameConditionDef wrathConditionDef = new GameConditionDef()
                 {
                     defName = "wrathConditionDef",
                     conditionClass = typeof(CustomIncidentCall.MapCondition_WrathBombing),
@@ -1177,8 +1180,9 @@ namespace Ankh
                 };
                 wrathConditionDef.ResolveReferences();
                 wrathConditionDef.PostLoad();
-                DefDatabase<MapConditionDef>.Add(wrathConditionDef);
+                DefDatabase<GameConditionDef>.Add(wrathConditionDef);
                 AnkhDefs.wrathCondition = wrathConditionDef;
+                shortHashGiver.Invoke(null, new object[] { wrathConditionDef, t });
             }
             #endregion
             #region Incidents
@@ -1187,13 +1191,13 @@ namespace Ankh
                 {
                     defName = "MiracleHeal",
                     label = "miracle heal",
-                    targetType = IncidentTargetType.BaseMap,
+                    targetType = IncidentTargetType.MapPlayerHome,
                     workerClass = typeof(CustomIncidentCall.MiracleHeal),
                     baseChance = 10
                 };
                 miracleHeal.ResolveReferences();
                 miracleHeal.PostLoad();
-                shortHashGiver.Invoke(null, new object[] { miracleHeal });
+                shortHashGiver.Invoke(null, new object[] { miracleHeal, t });
                 DefDatabase<IncidentDef>.Add(miracleHeal);
                 AnkhDefs.miracleHeal = miracleHeal;
             }
@@ -1273,10 +1277,10 @@ namespace Ankh
                 zap.ResolveReferences();
                 zap.PostLoad();
 
-                shortHashGiver.Invoke(null, new object[] { zap });
-                shortHashGiver.Invoke(null, new object[] { minifiedDef });
-                shortHashGiver.Invoke(null, new object[] { zap.blueprintDef });
-                shortHashGiver.Invoke(null, new object[] { zap.frameDef });
+                shortHashGiver.Invoke(null, new object[] { zap, t });
+                shortHashGiver.Invoke(null, new object[] { minifiedDef, t });
+                shortHashGiver.Invoke(null, new object[] { zap.blueprintDef, t });
+                shortHashGiver.Invoke(null, new object[] { zap.frameDef, t });
 
                 DefDatabase<ThingDef>.Add(zap);
                 DefDatabase<ThingDef>.Add(minifiedDef);
@@ -1359,10 +1363,10 @@ namespace Ankh
                 therm.ResolveReferences();
                 therm.PostLoad();
 
-                shortHashGiver.Invoke(null, new object[] { therm });
-                shortHashGiver.Invoke(null, new object[] { minifiedDef });
-                shortHashGiver.Invoke(null, new object[] { therm.blueprintDef });
-                shortHashGiver.Invoke(null, new object[] { therm.frameDef });
+                shortHashGiver.Invoke(null, new object[] { therm, t });
+                shortHashGiver.Invoke(null, new object[] { minifiedDef, t });
+                shortHashGiver.Invoke(null, new object[] { therm.blueprintDef, t });
+                shortHashGiver.Invoke(null, new object[] { therm.frameDef, t });
 
                 DefDatabase<ThingDef>.Add(therm);
                 DefDatabase<ThingDef>.Add(minifiedDef);
@@ -1445,10 +1449,10 @@ namespace Ankh
                 peg.ResolveReferences();
                 peg.PostLoad();
 
-                shortHashGiver.Invoke(null, new object[] { peg });
-                shortHashGiver.Invoke(null, new object[] { minifiedDef });
-                shortHashGiver.Invoke(null, new object[] { peg.blueprintDef });
-                shortHashGiver.Invoke(null, new object[] { peg.frameDef });
+                shortHashGiver.Invoke(null, new object[] { peg, t });
+                shortHashGiver.Invoke(null, new object[] { minifiedDef, t });
+                shortHashGiver.Invoke(null, new object[] { peg.blueprintDef, t });
+                shortHashGiver.Invoke(null, new object[] { peg.frameDef, t });
 
                 DefDatabase<ThingDef>.Add(peg);
                 DefDatabase<ThingDef>.Add(minifiedDef);
@@ -1531,10 +1535,10 @@ namespace Ankh
                 repo.ResolveReferences();
                 repo.PostLoad();
 
-                shortHashGiver.Invoke(null, new object[] { repo });
-                shortHashGiver.Invoke(null, new object[] { minifiedDef });
-                shortHashGiver.Invoke(null, new object[] { repo.blueprintDef });
-                shortHashGiver.Invoke(null, new object[] { repo.frameDef });
+                shortHashGiver.Invoke(null, new object[] { repo, t });
+                shortHashGiver.Invoke(null, new object[] { minifiedDef, t });
+                shortHashGiver.Invoke(null, new object[] { repo.blueprintDef, t });
+                shortHashGiver.Invoke(null, new object[] { repo.frameDef, t });
 
                 DefDatabase<ThingDef>.Add(repo);
                 DefDatabase<ThingDef>.Add(minifiedDef);
@@ -1618,10 +1622,10 @@ namespace Ankh
                 bob.ResolveReferences();
                 bob.PostLoad();
 
-                shortHashGiver.Invoke(null, new object[] { bob });
-                shortHashGiver.Invoke(null, new object[] { minifiedDef });
-                shortHashGiver.Invoke(null, new object[] { bob.blueprintDef });
-                shortHashGiver.Invoke(null, new object[] { bob.frameDef });
+                shortHashGiver.Invoke(null, new object[] { bob, t });
+                shortHashGiver.Invoke(null, new object[] { minifiedDef, t });
+                shortHashGiver.Invoke(null, new object[] { bob.blueprintDef, t });
+                shortHashGiver.Invoke(null, new object[] { bob.frameDef, t });
 
                 DefDatabase<ThingDef>.Add(bob);
                 DefDatabase<ThingDef>.Add(minifiedDef);
@@ -1704,10 +1708,10 @@ namespace Ankh
                 rootsy.ResolveReferences();
                 rootsy.PostLoad();
 
-                shortHashGiver.Invoke(null, new object[] { rootsy });
-                shortHashGiver.Invoke(null, new object[] { minifiedDef });
-                shortHashGiver.Invoke(null, new object[] { rootsy.blueprintDef });
-                shortHashGiver.Invoke(null, new object[] { rootsy.frameDef });
+                shortHashGiver.Invoke(null, new object[] { rootsy, t });
+                shortHashGiver.Invoke(null, new object[] { minifiedDef, t });
+                shortHashGiver.Invoke(null, new object[] { rootsy.blueprintDef, t });
+                shortHashGiver.Invoke(null, new object[] { rootsy.frameDef, t });
 
                 DefDatabase<ThingDef>.Add(rootsy);
                 DefDatabase<ThingDef>.Add(minifiedDef);
@@ -1790,10 +1794,10 @@ namespace Ankh
                 humour.ResolveReferences();
                 humour.PostLoad();
 
-                shortHashGiver.Invoke(null, new object[] { humour });
-                shortHashGiver.Invoke(null, new object[] { minifiedDef });
-                shortHashGiver.Invoke(null, new object[] { humour.blueprintDef });
-                shortHashGiver.Invoke(null, new object[] { humour.frameDef });
+                shortHashGiver.Invoke(null, new object[] { humour, t });
+                shortHashGiver.Invoke(null, new object[] { minifiedDef, t });
+                shortHashGiver.Invoke(null, new object[] { humour.blueprintDef, t });
+                shortHashGiver.Invoke(null, new object[] { humour.frameDef, t });
 
                 DefDatabase<ThingDef>.Add(humour);
                 DefDatabase<ThingDef>.Add(minifiedDef);
@@ -1876,10 +1880,10 @@ namespace Ankh
                 dorf.ResolveReferences();
                 dorf.PostLoad();
 
-                shortHashGiver.Invoke(null, new object[] { dorf });
-                shortHashGiver.Invoke(null, new object[] { minifiedDef });
-                shortHashGiver.Invoke(null, new object[] { dorf.blueprintDef });
-                shortHashGiver.Invoke(null, new object[] { dorf.frameDef });
+                shortHashGiver.Invoke(null, new object[] { dorf, t });
+                shortHashGiver.Invoke(null, new object[] { minifiedDef, t });
+                shortHashGiver.Invoke(null, new object[] { dorf.blueprintDef, t });
+                shortHashGiver.Invoke(null, new object[] { dorf.frameDef, t });
 
                 DefDatabase<ThingDef>.Add(dorf);
                 DefDatabase<ThingDef>.Add(minifiedDef);
@@ -1910,7 +1914,7 @@ namespace Ankh
                 };
                 fnarghWrath.ResolveReferences();
                 fnarghWrath.PostLoad();
-                shortHashGiver.Invoke(null, new object[] { fnarghWrath });
+                shortHashGiver.Invoke(null, new object[] { fnarghWrath, t });
                 DefDatabase<ThoughtDef>.Add(fnarghWrath);
                 AnkhDefs.fnarghWrath = fnarghWrath;
             }
@@ -1933,7 +1937,7 @@ namespace Ankh
                 };
                 fnarghFavor.ResolveReferences();
                 fnarghFavor.PostLoad();
-                shortHashGiver.Invoke(null, new object[] { fnarghFavor });
+                shortHashGiver.Invoke(null, new object[] { fnarghFavor, t });
                 DefDatabase<ThoughtDef>.Add(fnarghFavor);
                 AnkhDefs.fnarghFavor = fnarghFavor;
             }
@@ -1956,7 +1960,7 @@ namespace Ankh
                 };
                 fiveKnuckleShuffle.ResolveReferences();
                 fiveKnuckleShuffle.PostLoad();
-                shortHashGiver.Invoke(null, new object[] { fiveKnuckleShuffle });
+                shortHashGiver.Invoke(null, new object[] { fiveKnuckleShuffle, t });
                 DefDatabase<TraitDef>.Add(fiveKnuckleShuffle);
                 AnkhDefs.ankhTraits.Add(fiveKnuckleShuffle);
                 AnkhDefs.fiveKnuckleShuffle = fiveKnuckleShuffle;
@@ -1978,7 +1982,7 @@ namespace Ankh
                 };
                 coneOfShame.ResolveReferences();
                 coneOfShame.PostLoad();
-                shortHashGiver.Invoke(null, new object[] { coneOfShame });
+                shortHashGiver.Invoke(null, new object[] { coneOfShame, t });
                 DefDatabase<TraitDef>.Add(coneOfShame);
                 AnkhDefs.ankhTraits.Add(coneOfShame);
                 AnkhDefs.coneOfShame = coneOfShame;
@@ -2013,7 +2017,7 @@ namespace Ankh
                 };
                 thrustsOfVeneration.ResolveReferences();
                 thrustsOfVeneration.PostLoad();
-                shortHashGiver.Invoke(null, new object[] { thrustsOfVeneration });
+                shortHashGiver.Invoke(null, new object[] { thrustsOfVeneration, t });
                 DefDatabase<TraitDef>.Add(thrustsOfVeneration);
                 AnkhDefs.ankhTraits.Add(thrustsOfVeneration);
             }
@@ -2057,7 +2061,7 @@ namespace Ankh
                 };
                 armoredTouch.ResolveReferences();
                 armoredTouch.PostLoad();
-                shortHashGiver.Invoke(null, new object[] { armoredTouch });
+                shortHashGiver.Invoke(null, new object[] { armoredTouch, t });
                 DefDatabase<TraitDef>.Add(armoredTouch);
                 AnkhDefs.ankhTraits.Add(armoredTouch);
             }
@@ -2086,7 +2090,7 @@ namespace Ankh
                 };
                 teaAndScones.ResolveReferences();
                 teaAndScones.PostLoad();
-                shortHashGiver.Invoke(null, new object[] { teaAndScones });
+                shortHashGiver.Invoke(null, new object[] { teaAndScones, t });
                 DefDatabase<TraitDef>.Add(teaAndScones);
                 AnkhDefs.ankhTraits.Add(teaAndScones);
                 AnkhDefs.teaAndScones = teaAndScones;
@@ -2123,7 +2127,7 @@ namespace Ankh
                 };
                 fiveKnuckleShuffleHediff.ResolveReferences();
                 fiveKnuckleShuffleHediff.PostLoad();
-                shortHashGiver.Invoke(null, new object[] { fiveKnuckleShuffleHediff });
+                shortHashGiver.Invoke(null, new object[] { fiveKnuckleShuffleHediff, t });
                 DefDatabase<HediffDef>.Add(fiveKnuckleShuffleHediff);
                 AnkhDefs.fiveKnuckleShuffleHediff = fiveKnuckleShuffleHediff;
             }
@@ -2157,7 +2161,7 @@ namespace Ankh
                 };
                 coneOfShameHediff.ResolveReferences();
                 coneOfShameHediff.PostLoad();
-                shortHashGiver.Invoke(null, new object[] { coneOfShameHediff });
+                shortHashGiver.Invoke(null, new object[] { coneOfShameHediff, t });
                 DefDatabase<HediffDef>.Add(coneOfShameHediff);
                 AnkhDefs.coneOfShameHediff = coneOfShameHediff;
             }
@@ -2165,7 +2169,7 @@ namespace Ankh
         }
 
         private static void SendWrathLetter(string name, bool possessive, GlobalTargetInfo info) => 
-            Find.LetterStack.ReceiveLetter("wrath of " + name, name + " died, prepare to meet " + (possessive ? "his" : "her") + " wrath", LetterType.BadUrgent, info);
+            Find.LetterStack.ReceiveLetter("wrath of " + name, name + " died, prepare to meet " + (possessive ? "his" : "her") + " wrath", LetterDefOf.BadUrgent, info);
 
         private static List<string> ReadFileAndFetchStrings(string file)
         {

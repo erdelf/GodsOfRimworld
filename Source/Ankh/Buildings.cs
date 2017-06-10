@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -11,8 +12,16 @@ namespace Ankh
 {
     public class Buildings
     {
-        public class Building_ZAP : Building
+        public class Building_ZAP : Building, IAttackTargetSearcher
         {
+            public Thing Thing => this;
+
+            public Verb CurrentEffectiveVerb => throw new NotImplementedException();
+
+            public LocalTargetInfo LastAttackedTarget => throw new NotImplementedException();
+
+            public int LastAttackTargetTick => throw new NotImplementedException();
+
             public override void TickRare()
             {
                 List<IAttackTarget> potentialTargetsFor = this.Map.attackTargetsCache.GetPotentialTargetsFor(this);
@@ -35,7 +44,7 @@ namespace Ankh
             {
                 StringBuilder sb = new StringBuilder(base.GetInspectString());
                 sb.AppendLine("Zap favors: " + BehaviourInterpreter.staticVariables.zapCount);
-                return sb.ToString();
+                return sb.ToString().Trim();
             }
         }
         public class Building_THERM : Building
@@ -159,7 +168,7 @@ namespace Ankh
             {
                 StringBuilder sb = new StringBuilder(base.GetInspectString());
                 sb.AppendLine("Therm favors: " + BehaviourInterpreter.staticVariables.thermCount);
-                return sb.ToString();
+                return sb.ToString().Trim();
             }
         }
         public class Building_PEG : Building
@@ -227,16 +236,16 @@ namespace Ankh
             {
                 StringBuilder sb = new StringBuilder(base.GetInspectString());
                 sb.AppendLine("Peg favors: " + BehaviourInterpreter.staticVariables.pegCount);
-                return sb.ToString();
+                return sb.ToString().Trim();
             }
         }
         public class Building_REPO : Building
         {
             static FieldInfo resolvedDesignatorInfo = typeof(DesignationCategoryDef).GetField("resolvedDesignators", BindingFlags.Instance | BindingFlags.NonPublic);
 
-            public override void SpawnSetup(Map map)
+            public override void SpawnSetup(Map map, bool respawningAfterLoad)
             {
-                base.SpawnSetup(map);
+                base.SpawnSetup(map, respawningAfterLoad);
                 resolvedDesignatorInfo.SetValue(this.def.designationCategory, (resolvedDesignatorInfo.GetValue(this.def.designationCategory) as List<Designator>).Where(d => !(d is Designator_Build build) || !build.PlacingDef.Equals(this.def)).ToList());
             }
 
@@ -344,7 +353,7 @@ namespace Ankh
             {
                 StringBuilder sb = new StringBuilder(base.GetInspectString());
                 sb.AppendLine("Repo favors: " + BehaviourInterpreter.staticVariables.repoCount);
-                return sb.ToString();
+                return sb.ToString().Trim();
             }
         }
         public class Building_BOB : Building
@@ -401,7 +410,7 @@ namespace Ankh
             {
                 StringBuilder sb = new StringBuilder(base.GetInspectString());
                 sb.AppendLine("Bob favors: " + BehaviourInterpreter.staticVariables.bobCount);
-                return sb.ToString();
+                return sb.ToString().Trim();
             }
         }
         public class Building_ROOTSY : Building
@@ -473,16 +482,16 @@ namespace Ankh
             {
                 StringBuilder sb = new StringBuilder(base.GetInspectString());
                 sb.AppendLine("Rootsy favors: " + BehaviourInterpreter.staticVariables.rootsyCount);
-                return sb.ToString();
+                return sb.ToString().Trim();
             }
         }
         public class Building_HUMOUR : Building
         {
             static FieldInfo resolvedDesignatorInfo = typeof(DesignationCategoryDef).GetField("resolvedDesignators", BindingFlags.Instance | BindingFlags.NonPublic);
 
-            public override void SpawnSetup(Map map)
+            public override void SpawnSetup(Map map, bool respawningAfterLoad)
             {
-                base.SpawnSetup(map);
+                base.SpawnSetup(map, respawningAfterLoad);
                 resolvedDesignatorInfo.SetValue(this.def.designationCategory, (resolvedDesignatorInfo.GetValue(this.def.designationCategory) as List<Designator>).Where(d => !(d is Designator_Build build) || !build.PlacingDef.Equals(this.def)).ToList());
             }
 
@@ -669,7 +678,7 @@ namespace Ankh
             {
                 StringBuilder sb = new StringBuilder(base.GetInspectString());
                 sb.AppendLine("Humour favors: " + BehaviourInterpreter.staticVariables.humourCount);
-                return sb.ToString();
+                return sb.ToString().Trim();
             }
         }
         public class Building_DORF : Building
@@ -742,7 +751,7 @@ namespace Ankh
             {
                 StringBuilder sb = new StringBuilder(base.GetInspectString());
                 sb.AppendLine("Dorf favors: " + BehaviourInterpreter.staticVariables.dorfCount);
-                return sb.ToString();
+                return sb.ToString().Trim();
             }
         }
     }

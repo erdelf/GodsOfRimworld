@@ -7,7 +7,7 @@ namespace Ankh
     static class AnkhDefs
     {
         public static IncidentDef miracleHeal;
-        public static MapConditionDef wrathCondition;
+        public static GameConditionDef wrathCondition;
 
         public static ThingDef zapActivator;
         public static ThingDef thermActivator;
