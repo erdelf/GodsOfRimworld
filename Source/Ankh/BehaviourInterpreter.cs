@@ -163,15 +163,16 @@ namespace Ankh
                             List<string[]> actionList = keyList.SelectMany(i => this.instanceVariableHolder.scheduler[i]).ToList();
                             keyList.ToList().ForEach(i => this.instanceVariableHolder.scheduler.Remove(i));
 
-                            Action<string[]> actionListAction = a =>
+                            actionList.ForEach(a =>
                             {
                                 try
                                 {
+                                    Log.Message(String.Join(" | ", a) + actionList.Count);
                                     ExecuteScheduledCommand(a);
                                     actionList.Where(l => l != a && l[0].Equals(a[0]) && (l.Length == 1 || l[1].Equals(a[1]) && l[2].Equals(a[2]))).ToList().ForEach(l =>
                                     {
                                         Log.Message("Re-adding to avoid spamming");
-                                        AddToScheduler(GenDate.TicksPerHour/2-1, l);
+                                        AddToScheduler(GenDate.TicksPerHour / 2 - 1, l);
                                         actionList.Remove(l);
                                     });
                                 }
@@ -180,11 +181,7 @@ namespace Ankh
                                     Debug.Log(e.Message + "\n" + e.StackTrace);
                                     AddToScheduler(10, a);
                                 }
-                                actionList.Remove(a);
-                            };
-
-                            actionList.ForEach(actionListAction);
-                            actionList.ForEach(actionListAction);
+                            });
 
                             Find.ColonistBar.GetColonistsInOrder().ForEach(p =>
                             {
