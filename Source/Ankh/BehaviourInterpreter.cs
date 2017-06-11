@@ -31,7 +31,7 @@ namespace Ankh
 
         public static StaticVariables staticVariables;
 
-        private static Dictionary<string, Action<bool, bool>> gods;
+        public static Dictionary<string, Action<bool, bool>> gods;
 
         private static List<Action<string, bool>> wrathActions;
 
@@ -83,6 +83,17 @@ namespace Ankh
         private void InitializeStaticVariables()
         {
             AddGods();
+
+            GodsOfRimworld modHandler = LoadedModManager.GetMod<GodsOfRimworld>();
+
+            modHandler.GetSettings<GodSettings>().enabledGods = new Dictionary<StringWrapper, bool>();
+
+            foreach (string s in gods.Keys)
+            {
+                if (!modHandler.GetSettings<GodSettings>().enabledGods.ContainsKey(s))
+                    modHandler.GetSettings<GodSettings>().enabledGods.Add(s, true);
+            }
+
             AddCongrats();
             AddDeadWraths();
 
@@ -151,17 +162,17 @@ namespace Ankh
                             IEnumerable<int> keyList = this.instanceVariableHolder.scheduler.Keys.Where(i => i < Find.TickManager.TicksGame);
                             List<string[]> actionList = keyList.SelectMany(i => this.instanceVariableHolder.scheduler[i]).ToList();
                             keyList.ToList().ForEach(i => this.instanceVariableHolder.scheduler.Remove(i));
-                            actionList.ForEach(a =>
+
+                            Action<string[]> actionListAction = a =>
                             {
                                 try
                                 {
                                     ExecuteScheduledCommand(a);
-                                    actionList.Remove(a);
-                                    actionList.Where(l => l[0].Equals(a[0]) && (l.Length == 1 || l[1].Equals(a[1]) && l[2].Equals(a[2]))).ToList().ForEach(ac =>
+                                    actionList.Where(l => l != a && l[0].Equals(a[0]) && (l.Length == 1 || l[1].Equals(a[1]) && l[2].Equals(a[2]))).ToList().ForEach(l =>
                                     {
                                         Log.Message("Re-adding to avoid spamming");
-                                        AddToScheduler(GenDate.TicksPerHour/2-1, ac);
-                                        actionList.Remove(ac);
+                                        AddToScheduler(GenDate.TicksPerHour/2-1, l);
+                                        actionList.Remove(l);
                                     });
                                 }
                                 catch (Exception e)
@@ -170,7 +181,11 @@ namespace Ankh
                                     AddToScheduler(10, a);
                                 }
                                 actionList.Remove(a);
-                            });
+                            };
+
+                            actionList.ForEach(actionListAction);
+                            actionList.ForEach(actionListAction);
+
                             Find.ColonistBar.GetColonistsInOrder().ForEach(p =>
                             {
                                 if (p.story.traits.HasTrait(AnkhDefs.coneOfShame) && !p.health.hediffSet.HasHediff(AnkhDefs.coneOfShameHediff))
@@ -193,7 +208,7 @@ namespace Ankh
                                                 bool favor = split[1].ToLower().Equals("favor");
                                                 if (int.TryParse(split[3], out int points) && int.TryParse(split[4], out int cost))
                                                     if (points >= cost || split[0].EqualsIgnoreCase("itspladd") || split[0].EqualsIgnoreCase("erdelf") || (split[0].EqualsIgnoreCase("serphentalis") && points >= cost / 2))
-                                                        AddToScheduler(/*favor || Find.TickManager.TicksGame > GenDate.TicksPerDay * 3 ? 1 : GenDate.TicksPerDay * 3 - Find.TickManager.TicksGame*/ 1, "callTheGods", split[2].ToLower(), favor.ToString(), true.ToString());
+                                                        AddToScheduler(favor || Find.TickManager.TicksGame > GenDate.TicksPerDay * 3 ? 1 : GenDate.TicksPerDay * 3 - Find.TickManager.TicksGame, "callTheGods", split[2].ToLower(), favor.ToString(), true.ToString());
                                             }
                                         }
                                     );
@@ -272,6 +287,8 @@ namespace Ankh
                 case "callTheGods":
                     if (gods.TryGetValue(parameters[1], out Action<bool, bool> action))
                         action.Invoke(bool.Parse(parameters[2]), bool.Parse(parameters[3]));
+                    else
+                        Log.Message(parameters[1] + " is not in the active god pool");
                     break;
                 case "survivalReward":
                     Find.LetterStack.ReceiveLetter("survival reward", "You survived a month on this rimworld, the gods are pleased", LetterDefOf.Good);
@@ -404,7 +421,7 @@ namespace Ankh
             });
         }
 
-        private void AddGods() => gods = new Dictionary<string, Action<bool, bool>>
+        public static void AddGods() => gods = new Dictionary<string, Action<bool, bool>>
         {
                 {
                     "zap",
@@ -932,6 +949,7 @@ namespace Ankh
                             {
                                 if(apparelList.TryRandomElement(out ThingDef apparelDef))
                                 {
+                                    intVec = intVec.RandomAdjacentCell8Way();
                                     Thing apparel = ThingMaker.MakeThing(apparelDef, apparelDef.MadeFromStuff ? GenStuff.RandomStuffFor(apparelDef) : null);
                                     CompQuality qual = apparel.TryGetComp<CompQuality>();
                                     if(qual != null)

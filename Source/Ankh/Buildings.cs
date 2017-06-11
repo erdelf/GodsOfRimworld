@@ -623,7 +623,6 @@ namespace Ankh
                                 pawn.mindState = new Pawn_MindState(pawn);
                                 pawn.carryTracker = new Pawn_CarryTracker(pawn);
                                 pawn.needs = new Pawn_NeedsTracker(pawn);
-                                pawn.workSettings = new Pawn_WorkSettings(pawn);
                                 pawn.trader = new Pawn_TraderTracker(pawn);
 
                                 typeof(Pawn_HealthTracker).GetField("healthState", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(pawn.health, PawnHealthState.Mobile);
