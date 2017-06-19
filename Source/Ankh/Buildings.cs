@@ -723,15 +723,16 @@ namespace Ankh
                             canTargetLocations = true
                         }, c =>
                         {
+                            Pawn pawn = Map.mapPawns.FreeColonists.MaxBy(p => p.GetStatValue(StatDefOf.MiningYield));
                             foreach (IntVec3 current in GenAdj.CellsOccupiedBy(c.Cell, Rot4.North, new IntVec2(3, 3)))
                             {
                                 if (current.IsValid && current.InBounds(Find.VisibleMap))
                                 {
-                                    IEnumerable<Thing> list = current.GetThingList(Find.VisibleMap).Where(t => t.def.mineable);
+                                    IEnumerable<Mineable> list = current.GetThingList(Find.VisibleMap).Where(t => t is Mineable).Cast<Mineable>();
                                     while(list.Count() > 0)
                                     {
-                                        Thing current2 = list.First();
-                                        current2.TakeDamage(new DamageInfo(DamageDefOf.Mining, current2.HitPoints));
+                                        Mineable current2 = list.First();
+                                        current2.TakeDamage(new DamageInfo(DamageDefOf.Mining, current2.HitPoints, -1, pawn));
                                     }
                                     MoteMaker.ThrowMetaPuff(current.ToVector3(), Find.VisibleMap);
                                 }

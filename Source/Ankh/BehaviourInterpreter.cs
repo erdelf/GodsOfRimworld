@@ -713,7 +713,7 @@ namespace Ankh
                         if(favor)
                         {
                             pawn.SetFaction(Faction.OfPlayer);
-                            pawn.jobs.TryTakeOrderedJob(new Job(JobDefOf.GotoWander, map.areaManager.Home.ActiveCells.RandomElement()));
+                            pawn.jobs.TryTakeOrderedJob(new Job(JobDefOf.GotoWander, map.areaManager.Home.ActiveCells.Where(iv => iv.Standable(map)).RandomElement()));
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("moo's favor",
                                      "The god of animals shows mercy on your colony. He commands his subordinate to be devoted to your colony", LetterDefOf.Good, pawn);
@@ -806,7 +806,7 @@ namespace Ankh
                              if (p != null)
                              {
                                  p.needs.mood.thoughts.memories.TryGainMemory(AnkhDefs.fnarghWrath);
-                                 p.mindState.mentalStateHandler.TryStartMentalState(DefDatabase<MentalStateDef>.AllDefs.Where(msd => !msd.defName.EqualsIgnoreCase("SocialFight") && !msd.defName.EqualsIgnoreCase("PanicFlee") && !msd.defName.EqualsIgnoreCase("GiveUpExit") && msd.Worker.GetType().GetField("otherPawn", (BindingFlags) 60) == null).RandomElement(), "Fnargh's wrath", true, true);
+                                 p.mindState.mentalStateHandler.TryStartMentalState(DefDatabase<MentalStateDef>.AllDefs.Where(msd => msd != MentalStateDefOf.SocialFighting && msd != MentalStateDefOf.PanicFlee && !msd.defName.EqualsIgnoreCase("GiveUpExit") && msd.Worker.GetType().GetField("otherPawn", (BindingFlags) 60) == null).RandomElement(), "Fnargh's wrath", true, true);
                                  if (letter)
                                      Find.LetterStack.ReceiveLetter("fnargh's wrath",
                                          "The god fnargh is angry at your colony. He commands the web of thought to make " + p.NameStringShort + " mad", LetterDefOf.BadNonUrgent, p);
@@ -941,7 +941,7 @@ namespace Ankh
                             Map map = Find.AnyPlayerHomeMap;
                             IEnumerable<ThingDef> apparelList = DefDatabase<ThingDef>.AllDefsListForReading.Where(td => td.IsApparel);
 
-                            IntVec3 intVec = map.areaManager.Home.ActiveCells.RandomElement();
+                            IntVec3 intVec = map.areaManager.Home.ActiveCells.Where(iv => iv.Standable(map)).RandomElement();
                             for(int i=0;i<5;i++)
                             {
                                 if(apparelList.TryRandomElement(out ThingDef apparelDef))
@@ -1091,7 +1091,7 @@ namespace Ankh
                                 pawn.story.childhood = colonist.story.childhood;
                                 pawn.story.adulthood = colonist.story.adulthood;
                                 pawn.skills.skills = colonist.skills.skills.ListFullCopy();
-                                pawn.health.hediffSet.hediffs = colonist.health.hediffSet.hediffs.ListFullCopy();
+                                pawn.health.hediffSet.hediffs = colonist.health.hediffSet.hediffs.ListFullCopy().Where(hediff => hediff is Hediff_AddedPart).ToList();
                                 pawn.story.bodyType = colonist.story.bodyType;
                                 typeof(Pawn_StoryTracker).GetField("headGraphicPath", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(pawn.story, colonist.story.HeadGraphicPath);
                                 FieldInfo recordInfo = typeof(Pawn_RecordsTracker).GetField("records", BindingFlags.NonPublic | BindingFlags.Instance);
