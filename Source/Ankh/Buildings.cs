@@ -534,7 +534,7 @@ namespace Ankh
                             while (i > 0 && hediffs.Count > 0)
                             {
                                 Hediff_Injury hediff = hediffs.First();
-                                float val = Mathf.Min(0, hediff.Severity);
+                                float val = Mathf.Min(i, hediff.Severity);
                                 i -= Mathf.RoundToInt(val);
                                 hediff.Heal(val);
                                 hediffs.Remove(hediff);
