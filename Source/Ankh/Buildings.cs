@@ -241,13 +241,6 @@ namespace Ankh
         }
         public class Building_REPO : Building
         {
-            static FieldInfo resolvedDesignatorInfo = typeof(DesignationCategoryDef).GetField("resolvedDesignators", BindingFlags.Instance | BindingFlags.NonPublic);
-
-            public override void SpawnSetup(Map map, bool respawningAfterLoad)
-            {
-                base.SpawnSetup(map, respawningAfterLoad);
-                resolvedDesignatorInfo.SetValue(this.def.designationCategory, (resolvedDesignatorInfo.GetValue(this.def.designationCategory) as List<Designator>).Where(d => !(d is Designator_Build build) || !build.PlacingDef.Equals(this.def)).ToList());
-            }
 
             public override IEnumerable<Gizmo> GetGizmos()
             {
@@ -322,31 +315,6 @@ namespace Ankh
             {
                 GenDraw.DrawRadiusRing(this.DrawPos.ToIntVec3(), 25.9f);
                 base.DrawExtraSelectionOverlays();
-            }
-
-            public override void Destroy(DestroyMode mode = DestroyMode.Vanish)
-            {
-                ReEnterBuildingDesignator();
-                base.Destroy(mode);
-            }
-
-            public override void DeSpawn()
-            {
-                ReEnterBuildingDesignator();
-                base.DeSpawn();
-            }
-
-            public override void Discard()
-            {
-                ReEnterBuildingDesignator();
-                base.Discard();
-            }
-
-            private void ReEnterBuildingDesignator()
-            {
-                List<Designator> resolved = (resolvedDesignatorInfo.GetValue(this.def.designationCategory) as List<Designator>);
-                resolved.Add(new Designator_Build(this.def));
-                resolvedDesignatorInfo.SetValue(this.def.designationCategory, resolved);
             }
 
             public override string GetInspectString()
@@ -487,14 +455,6 @@ namespace Ankh
         }
         public class Building_HUMOUR : Building
         {
-            static FieldInfo resolvedDesignatorInfo = typeof(DesignationCategoryDef).GetField("resolvedDesignators", BindingFlags.Instance | BindingFlags.NonPublic);
-
-            public override void SpawnSetup(Map map, bool respawningAfterLoad)
-            {
-                base.SpawnSetup(map, respawningAfterLoad);
-                resolvedDesignatorInfo.SetValue(this.def.designationCategory, (resolvedDesignatorInfo.GetValue(this.def.designationCategory) as List<Designator>).Where(d => !(d is Designator_Build build) || !build.PlacingDef.Equals(this.def)).ToList());
-            }
-
             public override IEnumerable<Gizmo> GetGizmos()
             {
                 foreach (Gizmo g in base.GetGizmos())
@@ -646,31 +606,6 @@ namespace Ankh
             {
                 GenDraw.DrawRadiusRing(this.DrawPos.ToIntVec3(), 25.9f);
                 base.DrawExtraSelectionOverlays();
-            }
-
-            public override void Destroy(DestroyMode mode = DestroyMode.Vanish)
-            {
-                ReEnterBuildingDesignator();
-                base.Destroy(mode);
-            }
-
-            public override void DeSpawn()
-            {
-                ReEnterBuildingDesignator();
-                base.DeSpawn();
-            }
-
-            public override void Discard()
-            {
-                ReEnterBuildingDesignator();
-                base.Discard();
-            }
-
-            private void ReEnterBuildingDesignator()
-            {
-                List<Designator> resolved = (resolvedDesignatorInfo.GetValue(this.def.designationCategory) as List<Designator>);
-                resolved.Add(new Designator_Build(this.def));
-                resolvedDesignatorInfo.SetValue(this.def.designationCategory, resolved);
             }
 
             public override string GetInspectString()
