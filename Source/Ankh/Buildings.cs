@@ -689,5 +689,10 @@ namespace Ankh
                 return sb.ToString().Trim();
             }
         }
+
+        public class Building_Altar : Building
+        {
+
+        }
     }
 }

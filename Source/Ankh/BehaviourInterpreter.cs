@@ -1908,6 +1908,63 @@ namespace Ankh
                 dorf.designationCategory.PostLoad();
                 AnkhDefOf.dorfActivator = dorf;
             }
+            {
+                ThingDef sacrificeAltar = new ThingDef()
+                {
+                    defName = "sacrificeAltar",
+                    thingClass = typeof(Buildings.Building_Altar),
+                    label = "sacrifice altar",
+                    description = "This Altar serves as a way to please the gods.",
+                    size = new IntVec2(1, 3),
+                    passability = Traversability.Impassable,
+                    category = ThingCategory.Building,
+                    selectable = true,
+                    useHitPoints = false,
+                    altitudeLayer = AltitudeLayer.Building,
+                    leaveResourcesWhenKilled = true,
+                    rotatable = false,
+                    graphicData = new GraphicData()
+                    {
+                        texPath = "HumanAltar",
+                        graphicClass = typeof(Graphic_Single),
+                        shaderType = ShaderType.CutoutComplex,
+                        drawSize = new Vector2(1, 2)
+                    },
+                    statBases = new List<StatModifier>()
+                    {
+                        new StatModifier()
+                        {
+                            stat = StatDefOf.MaxHitPoints,
+                            value = 500
+                        },
+                        new StatModifier()
+                        {
+                            stat = StatDefOf.WorkToMake,
+                            value = 200
+                        },
+                        new StatModifier()
+                        {
+                            stat = StatDefOf.Flammability,
+                            value = 0
+                        },
+                        new StatModifier()
+                        {
+                            stat = StatDefOf.Beauty,
+                            value = 4
+                        }
+                    },
+                    building = new BuildingProperties()
+                    {
+                        isInert = true,
+                        ignoreNeedsPower = true
+                    }
+                };
+                sacrificeAltar.ResolveReferences();
+                sacrificeAltar.PostLoad();
+                shortHashGiver.Invoke(null, new object[] { sacrificeAltar, t });
+                DefDatabase<ThingDef>.Add(sacrificeAltar);
+                AnkhDefOf.sacrificeAltar = sacrificeAltar;
+            }
             #endregion
             #region Thoughts
             {

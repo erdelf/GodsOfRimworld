@@ -17,6 +17,7 @@ namespace Ankh
         public static ThingDef rootsyActivator;
         public static ThingDef humourActivator;
         public static ThingDef dorfActivator;
+        public static ThingDef sacrificeAltar;
 
         public static ThoughtDef fnarghFavor;
         public static ThoughtDef fnarghWrath;
