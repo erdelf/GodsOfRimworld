@@ -30,5 +30,7 @@ namespace Ankh
         public static HediffDef coneOfShameHediff;
 
         public static TraitDef teaAndScones;
+
+        public static JobDef sacrificeToAltar;
     }
 }

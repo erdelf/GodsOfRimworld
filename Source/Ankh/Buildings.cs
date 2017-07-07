@@ -692,7 +692,13 @@ namespace Ankh
 
         public class Building_Altar : Building
         {
+            public override IEnumerable<FloatMenuOption> GetFloatMenuOptions(Pawn selPawn)
+            {
+                if(BehaviourInterpreter._instance.instanceVariableHolder.altarState <= 1)
+                    yield return new FloatMenuOption("Sacrifice " + selPawn.LabelCap, () => selPawn.jobs.TryTakeOrderedJob(new Job(AnkhDefOf.sacrificeToAltar, this)));
+            }
 
+            public override IEnumerable<Gizmo> GetGizmos() => new List<Gizmo>();
         }
     }
 }

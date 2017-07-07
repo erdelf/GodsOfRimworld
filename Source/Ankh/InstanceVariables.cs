@@ -13,6 +13,7 @@ namespace Ankh
         public Dictionary<int, List<string[]>> scheduler;
         public List<string> deadWraths;
         public int lastTickTick;
+        public int altarState;
 
         public SerializeableKeyValue<int, List<string[]>>[] SchedulerSerialized
         {

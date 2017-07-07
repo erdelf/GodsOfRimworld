@@ -77,6 +77,7 @@
     <Compile Include="Buildings.cs" />
     <Compile Include="CustomIncidentClasses.cs" />
     <Compile Include="InstanceVariables.cs" />
+    <Compile Include="Misc.cs" />
     <Compile Include="ModControl.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StaticVariables.cs" />

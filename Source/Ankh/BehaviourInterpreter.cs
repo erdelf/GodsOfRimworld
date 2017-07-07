@@ -37,7 +37,7 @@ namespace Ankh
 
         private static List<Action> congratsActions;
 
-        private InstanceVariables instanceVariableHolder;
+        public InstanceVariables instanceVariableHolder;
 
         static BehaviourInterpreter()
         {
@@ -137,6 +137,7 @@ namespace Ankh
                     instanceVariable.moodTracker = new Dictionary<string, float>();
                     instanceVariable.scheduler = new Dictionary<int, List<string[]>>();
                     instanceVariable.deadWraths = new List<string>();
+                    instanceVariable.altarState = 0;
 
                     this.instanceVariableHolder = instanceVariable;
                     staticVariables.instanceVariables.Add(instanceVariable);
@@ -205,7 +206,7 @@ namespace Ankh
                                                 bool favor = split[1].ToLower().Equals("favor");
                                                 if (int.TryParse(split[3], out int points) && int.TryParse(split[4], out int cost))
                                                     if (points >= cost || split[0].EqualsIgnoreCase("itspladd") || split[0].EqualsIgnoreCase("erdelf") || (split[0].EqualsIgnoreCase("serphentalis") && points >= cost / 2))
-                                                        AddToScheduler(favor || Find.TickManager.TicksGame > GenDate.TicksPerDay * 3 ? 1 : GenDate.TicksPerDay * 3 - Find.TickManager.TicksGame, "callTheGods", split[2].ToLower(), favor.ToString(), true.ToString());
+                                                        AddToScheduler(favor ? 1 : Find.TickManager.TicksGame > GenDate.TicksPerDay * 3 ? (this.instanceVariableHolder.altarState == 0 ? 1 : GenDate.TicksPerDay) : /*GenDate.TicksPerDay * 3 - Find.TickManager.TicksGame*/1, "callTheGods", split[2].ToLower(), favor.ToString(), true.ToString());
                                             }
                                         }
                                     );
@@ -292,7 +293,7 @@ namespace Ankh
                     congratsActions.RandomElement().Invoke();
                     break;
                 case "wrathCall":
-                    CustomIncidentCall.WeatherEvent_WrathBombing.erdelf = parameters[1].EqualsIgnoreCase("erdelf");
+                    CustomIncidentClasses.WeatherEvent_WrathBombing.erdelf = parameters[1].EqualsIgnoreCase("erdelf");
                     wrathActions.RandomElement().Invoke(parameters[1], (Gender)Enum.Parse(typeof(Gender), parameters[2], true) == Gender.Male);
                     this.instanceVariableHolder.moodTracker.Remove(parameters[1]);
                     break;
@@ -380,7 +381,7 @@ namespace Ankh
                 {
                     kindDef = new PawnGroupKindDef()
                     {
-                        workerClass = typeof(CustomIncidentCall.PawnGroupKindWorker_Wrath)
+                        workerClass = typeof(CustomIncidentClasses.PawnGroupKindWorker_Wrath)
                     },
                 }.GeneratePawns(new PawnGroupMakerParms()
                 {
@@ -487,7 +488,7 @@ namespace Ankh
                             Letter letterobj = LetterMaker.MakeLetter("sparto's wrath",
                                     "The god of war is angry at your colony. She commands the locals of this world to attack", LetterDefOf.BadUrgent);
 
-                            CustomIncidentCall.CallEnemyRaid(incidentParms, letter ? letterobj : null);
+                            CustomIncidentClasses.CallEnemyRaid(incidentParms, letter ? letterobj : null);
 
                         }
                     }
@@ -1067,7 +1068,7 @@ namespace Ankh
                             {
                                 kindDef = new PawnGroupKindDef()
                                 {
-                                    workerClass = typeof(CustomIncidentCall.PawnGroupKindWorker_Wrath)
+                                    workerClass = typeof(CustomIncidentClasses.PawnGroupKindWorker_Wrath)
                                 },
                             }.GeneratePawns(new PawnGroupMakerParms()
                             {
@@ -1186,7 +1187,7 @@ namespace Ankh
                 GameConditionDef wrathConditionDef = new GameConditionDef()
                 {
                     defName = "wrathConditionDef",
-                    conditionClass = typeof(CustomIncidentCall.MapCondition_WrathBombing),
+                    conditionClass = typeof(CustomIncidentClasses.MapCondition_WrathBombing),
                     label = "wrath of the dead",
                     description = "The gods sent their pawn  down in human form to serve your colony... and you failed him",
                     endMessage = "The gods are satisfied with your pain",
@@ -1207,7 +1208,7 @@ namespace Ankh
                     defName = "MiracleHeal",
                     label = "miracle heal",
                     targetType = IncidentTargetType.MapPlayerHome,
-                    workerClass = typeof(CustomIncidentCall.MiracleHeal),
+                    workerClass = typeof(CustomIncidentClasses.MiracleHeal),
                     baseChance = 10
                 };
                 miracleHeal.ResolveReferences();
@@ -1215,6 +1216,20 @@ namespace Ankh
                 shortHashGiver.Invoke(null, new object[] { miracleHeal, t });
                 DefDatabase<IncidentDef>.Add(miracleHeal);
                 AnkhDefOf.miracleHeal = miracleHeal;
+            }
+            {
+                IncidentDef altarAppearance = new IncidentDef()
+                {
+                    defName = "AltarAppearance",
+                    label = "altar Appearance",
+                    targetType = IncidentTargetType.MapPlayerHome,
+                    workerClass = typeof(CustomIncidentClasses.AltarAppearance),
+                    baseChance = 10
+                };
+                altarAppearance.ResolveReferences();
+                altarAppearance.PostLoad();
+                shortHashGiver.Invoke(null, new object[] { altarAppearance, t });
+                DefDatabase<IncidentDef>.Add(altarAppearance);
             }
             #endregion
             #region Buildings
@@ -1915,7 +1930,7 @@ namespace Ankh
                     thingClass = typeof(Buildings.Building_Altar),
                     label = "sacrifice altar",
                     description = "This Altar serves as a way to please the gods.",
-                    size = new IntVec2(1, 3),
+                    size = new IntVec2(3, 1),
                     passability = Traversability.Impassable,
                     category = ThingCategory.Building,
                     selectable = true,
@@ -1928,7 +1943,7 @@ namespace Ankh
                         texPath = "HumanAltar",
                         graphicClass = typeof(Graphic_Single),
                         shaderType = ShaderType.CutoutComplex,
-                        drawSize = new Vector2(1, 2)
+                        drawSize = new Vector2(4, 2)
                     },
                     statBases = new List<StatModifier>()
                     {
@@ -1950,14 +1965,17 @@ namespace Ankh
                         new StatModifier()
                         {
                             stat = StatDefOf.Beauty,
-                            value = 4
+                            value = 50
                         }
                     },
                     building = new BuildingProperties()
                     {
                         isInert = true,
                         ignoreNeedsPower = true
-                    }
+                    },
+                    inspectorTabs = new List<Type>() { typeof(ITab_Wraths) },
+                    hasInteractionCell = true,
+                    interactionCellOffset = new IntVec3(0, 0, -1)
                 };
                 sacrificeAltar.ResolveReferences();
                 sacrificeAltar.PostLoad();
@@ -2236,6 +2254,21 @@ namespace Ankh
                 shortHashGiver.Invoke(null, new object[] { coneOfShameHediff, t });
                 DefDatabase<HediffDef>.Add(coneOfShameHediff);
                 AnkhDefOf.coneOfShameHediff = coneOfShameHediff;
+            }
+            #endregion
+            #region Jobs
+            {
+                JobDef sacrifice = new JobDef()
+                {
+                    defName = "sacrificeYourself",
+                    driverClass = typeof(JobDriver_Sacrifice),
+                    reportString = "selfsacrificing"
+                };
+                sacrifice.ResolveReferences();
+                sacrifice.PostLoad();
+                shortHashGiver.Invoke(null, new object[] { sacrifice, t });
+                DefDatabase<JobDef>.Add(sacrifice);
+                AnkhDefOf.sacrificeToAltar = sacrifice;
             }
             #endregion
         }

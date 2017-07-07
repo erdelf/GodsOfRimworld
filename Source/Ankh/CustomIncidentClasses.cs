@@ -11,7 +11,7 @@ using Verse.AI.Group;
 
 namespace Ankh
 {
-    static class CustomIncidentCall
+    static class CustomIncidentClasses
     {
         static MethodInfo RaidPointInfo = typeof(IncidentWorker_Raid).GetMethod("ResolveRaidPoints", BindingFlags.NonPublic | BindingFlags.Instance);
         static MethodInfo RaidFactionInfo = typeof(IncidentWorker_RaidEnemy).GetMethod("TryResolveRaidFaction", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -301,12 +301,8 @@ namespace Ankh
 
         public class MiracleHeal : IncidentWorker
         {
-            protected override bool CanFireNowSub(IIncidentTarget target)
-            {
-                    if (((Map) target).mapPawns.FreeColonists.Any((Pawn col) => col.health.hediffSet.GetHediffs<Hediff_Injury>().Count() > 0 && (col.Faction == Faction.OfPlayer)))
-                        return true;
-                return false;
-            }
+            protected override bool CanFireNowSub(IIncidentTarget target) => 
+                ((Map)target).mapPawns.FreeColonists.Any((Pawn col) => col.health.hediffSet.GetHediffs<Hediff_Injury>().Count() > 0 && (col.Faction == Faction.OfPlayer));
 
             public override bool TryExecute(IncidentParms parms)
             {
@@ -325,6 +321,49 @@ namespace Ankh
                     return true;
                 }
                 return false;
+            }
+        }
+
+        public class AltarAppearance : IncidentWorker
+        {
+            protected override bool CanFireNowSub(IIncidentTarget target) => 
+                !((Map)target).listerThings.ThingsOfDef(AnkhDefOf.sacrificeAltar).Any();
+
+            public override bool TryExecute(IncidentParms parms)
+            {
+                Map map = parms.target as Map;
+                Thing thing;
+                IntVec3 loc = map.AllCells.Where(ivc => ivc.Standable(map) && !ivc.Fogged(map) && ivc.GetTerrain(map).affordances.Contains(TerrainAffordance.Heavy) && !ivc.CloseToEdge(map, Mathf.RoundToInt(map.Size.LengthHorizontal/4))).RandomElement();
+                Find.LetterStack.ReceiveLetter("Altar appeared", "An altar of the Gods appeared. They might have something to offer.", LetterDefOf.Good, 
+                    thing = GenSpawn.Spawn(ThingMaker.MakeThing(AnkhDefOf.sacrificeAltar, GenStuff.RandomStuffFor(AnkhDefOf.sacrificeAltar)), loc, map));
+                
+                CellRect occupied = GenAdj.OccupiedRect(thing);
+
+                Predicate<IntVec3> locCheck = new Predicate<IntVec3>(ivc =>
+                {
+                    return !(occupied.Contains(ivc)) && ivc.Standable(map) && !ivc.Fogged(map);
+                });
+
+                CellRect.CenteredOn(loc, 10).Cells.Where(ivc => locCheck(ivc)).ToList().ForEach(c => 
+                    map.weatherManager.eventHandler.AddEvent(new WeatherEvent_LightningStrike(map, c)));
+
+                CellRect.CenteredOn(loc, 5).Cells.Where(ivc => locCheck(ivc)).ToList().ForEach(c =>
+                {
+                    Vector3 vc = c.ToVector3();
+                    MoteMaker.ThrowMicroSparks(vc, map);
+                    MoteMaker.ThrowHeatGlow(c, map, 10f);
+                    MoteMaker.ThrowFireGlow(c, map, 10f);
+                    MoteMaker.ThrowLightningGlow(vc, map, 10f);
+                    MoteMaker.ThrowMetaPuff(vc, map);
+                });
+
+
+
+                if(Find.VisibleMap != map)
+                    Current.Game.VisibleMap = map;
+                Find.CameraDriver.SetRootPosAndSize(Find.VisibleMap.rememberedCameraPos.rootPos, 11f);
+                Find.CameraDriver.JumpToVisibleMapLoc(loc);
+                return true;
             }
         }
     }
