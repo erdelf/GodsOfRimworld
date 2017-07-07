@@ -658,7 +658,7 @@ namespace Ankh
                             canTargetLocations = true
                         }, c =>
                         {
-                            Pawn pawn = Map.mapPawns.FreeColonists.MaxBy(p => p.GetStatValue(StatDefOf.MiningYield));
+                            Pawn pawn = this.Map.mapPawns.FreeColonists.MaxBy(p => p.GetStatValue(StatDefOf.MiningYield));
                             foreach (IntVec3 current in GenAdj.CellsOccupiedBy(c.Cell, Rot4.North, new IntVec2(3, 3)))
                             {
                                 if (current.IsValid && current.InBounds(Find.VisibleMap))

@@ -167,7 +167,7 @@ namespace Ankh
                             {
                                 try
                                 {
-                                    Log.Message(String.Join(" | ", a) + actionList.Count);
+                                    Log.Message(string.Join(" | ", a) + actionList.Count);
                                     ExecuteScheduledCommand(a);
                                     actionList.Where(l => l != a && l[0].Equals(a[0]) && (l.Length == 1 || l[1].Equals(a[1]) && l[2].Equals(a[2]))).ToList().ForEach(l =>
                                     {
@@ -185,10 +185,10 @@ namespace Ankh
 
                             Find.ColonistBar.GetColonistsInOrder().ForEach(p =>
                             {
-                                if (p.story.traits.HasTrait(AnkhDefs.coneOfShame) && !p.health.hediffSet.HasHediff(AnkhDefs.coneOfShameHediff))
-                                    p.health.hediffSet.AddDirect(HediffMaker.MakeHediff(AnkhDefs.coneOfShameHediff, p));
-                                if (p.story.traits.HasTrait(AnkhDefs.fiveKnuckleShuffle) && !p.health.hediffSet.HasHediff(AnkhDefs.fiveKnuckleShuffleHediff))
-                                    p.health.hediffSet.AddDirect(HediffMaker.MakeHediff(AnkhDefs.fiveKnuckleShuffleHediff, p));
+                                if (p.story.traits.HasTrait(AnkhDefOf.coneOfShame) && !p.health.hediffSet.HasHediff(AnkhDefOf.coneOfShameHediff))
+                                    p.health.hediffSet.AddDirect(HediffMaker.MakeHediff(AnkhDefOf.coneOfShameHediff, p));
+                                if (p.story.traits.HasTrait(AnkhDefOf.fiveKnuckleShuffle) && !p.health.hediffSet.HasHediff(AnkhDefOf.fiveKnuckleShuffleHediff))
+                                    p.health.hediffSet.AddDirect(HediffMaker.MakeHediff(AnkhDefOf.fiveKnuckleShuffleHediff, p));
                             });
 
                             if (Find.TickManager.TicksGame / (GenDate.TicksPerHour / 2) > this.instanceVariableHolder.lastTickTick / (GenDate.TicksPerHour / 2))
@@ -212,7 +212,7 @@ namespace Ankh
 
                                 if (Find.TickManager.TicksGame / GenDate.TicksPerHour > this.instanceVariableHolder.lastTickTick / GenDate.TicksPerHour)
                                 {
-                                    Find.ColonistBar.GetColonistsInOrder().Where(p => !p.Dead && p.story.traits.HasTrait(AnkhDefs.teaAndScones)).ToList().ForEach(p =>
+                                    Find.ColonistBar.GetColonistsInOrder().Where(p => !p.Dead && p.story.traits.HasTrait(AnkhDefOf.teaAndScones)).ToList().ForEach(p =>
                                     {
                                         int i = 2;
 
@@ -349,7 +349,7 @@ namespace Ankh
                     {
                         AddToScheduler(250+i*50, "callTheGods", gods.Keys.RandomElement(), true.ToString(), true.ToString());
                     }
-                    AnkhDefs.miracleHeal.Worker.TryExecute(null);
+                    AnkhDefOf.miracleHeal.Worker.TryExecute(null);
                 }
             };
 
@@ -413,7 +413,7 @@ namespace Ankh
 
             wrathActions.Add((s, b) =>
             {
-                Find.AnyPlayerHomeMap.gameConditionManager.RegisterCondition(GameConditionMaker.MakeCondition(AnkhDefs.wrathCondition, GenDate.TicksPerDay * 1, 0));
+                Find.AnyPlayerHomeMap.gameConditionManager.RegisterCondition(GameConditionMaker.MakeCondition(AnkhDefOf.wrathCondition, GenDate.TicksPerDay * 1, 0));
                 SendWrathLetter(s, b, GlobalTargetInfo.Invalid);
             });
         }
@@ -428,7 +428,7 @@ namespace Ankh
                         {
                             staticVariables.zapCount++;
 
-                            List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(AnkhDefs.zapActivator)).ToList();
+                            List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(AnkhDefOf.zapActivator)).ToList();
 
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("zap's favor",
@@ -500,7 +500,7 @@ namespace Ankh
                         {
                             staticVariables.pegCount++;
 
-                            ThingDef peg = AnkhDefs.pegActivator;
+                            ThingDef peg = AnkhDefOf.pegActivator;
                             List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(peg)).ToList();
 
                             if (letter)
@@ -529,7 +529,7 @@ namespace Ankh
                         if (favor)
                         {
                             staticVariables.repoCount++;
-                            ThingDef peg = AnkhDefs.repoActivator;
+                            ThingDef peg = AnkhDefOf.repoActivator;
                             List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(peg)).ToList();
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("repo's favor",
@@ -581,7 +581,7 @@ namespace Ankh
                         if(favor)
                         {
                             staticVariables.bobCount++;
-                            ThingDef peg = AnkhDefs.bobActivator;
+                            ThingDef peg = AnkhDefOf.bobActivator;
                             List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(peg)).ToList();
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("bob's favor",
@@ -616,7 +616,7 @@ namespace Ankh
                         if(favor)
                         {
                             staticVariables.rootsyCount++;
-                            ThingDef peg = AnkhDefs.rootsyActivator;
+                            ThingDef peg = AnkhDefOf.rootsyActivator;
                             List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(peg)).ToList();
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("rootsy's favor",
@@ -787,7 +787,7 @@ namespace Ankh
                              Pawn p = Find.ColonistBar?.GetColonistsInOrder()?.Where((Pawn x) => !x.Dead && !x.Downed && !x.mindState.mentalStateHandler.InMentalState && !x.jobs.curDriver.asleep).RandomElement();
                              if (p != null)
                              {
-                                 p.needs.mood.thoughts.memories.TryGainMemory(AnkhDefs.fnarghFavor);
+                                 p.needs.mood.thoughts.memories.TryGainMemory(AnkhDefOf.fnarghFavor);
                                  if (letter)
                                      Find.LetterStack.ReceiveLetter("fnargh's favor",
                                           "The god fnargh shows mercy on your colony. He commands the web of thought to make " + p.NameStringShort + " happy", LetterDefOf.Good, p);
@@ -805,7 +805,7 @@ namespace Ankh
                              Pawn p = pawns.RandomElement();
                              if (p != null)
                              {
-                                 p.needs.mood.thoughts.memories.TryGainMemory(AnkhDefs.fnarghWrath);
+                                 p.needs.mood.thoughts.memories.TryGainMemory(AnkhDefOf.fnarghWrath);
                                  p.mindState.mentalStateHandler.TryStartMentalState(DefDatabase<MentalStateDef>.AllDefs.Where(msd => msd != MentalStateDefOf.SocialFighting && msd != MentalStateDefOf.PanicFlee && !msd.defName.EqualsIgnoreCase("GiveUpExit") && msd.Worker.GetType().GetField("otherPawn", (BindingFlags) 60) == null).RandomElement(), "Fnargh's wrath", true, true);
                                  if (letter)
                                      Find.LetterStack.ReceiveLetter("fnargh's wrath",
@@ -824,7 +824,7 @@ namespace Ankh
                         {
                             staticVariables.thermCount++;
 
-                            List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(AnkhDefs.thermActivator)).ToList();
+                            List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(AnkhDefOf.thermActivator)).ToList();
 
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("therm's favor",
@@ -912,7 +912,7 @@ namespace Ankh
                         {
                             staticVariables.humourCount++;
 
-                            List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(AnkhDefs.humourActivator)).ToList();
+                            List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(AnkhDefOf.humourActivator)).ToList();
 
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("humour's favor",
@@ -994,7 +994,7 @@ namespace Ankh
                         {
                             staticVariables.dorfCount++;
 
-                            List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(AnkhDefs.dorfActivator)).ToList();
+                            List<Thing> activators = Find.Maps.Where(m => m.IsPlayerHome).SelectMany(m => m.listerThings.ThingsOfDef(AnkhDefOf.dorfActivator)).ToList();
 
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("dorf's favor",
@@ -1025,7 +1025,7 @@ namespace Ankh
                     {
                         if(favor)
                         {
-                            List<Pawn> pawns = Find.ColonistBar.GetColonistsInOrder().Where((Pawn x) => !x.Dead && !AnkhDefs.ankhTraits.TrueForAll(t => x.story.traits.HasTrait(t))).ToList();
+                            List<Pawn> pawns = Find.ColonistBar.GetColonistsInOrder().Where((Pawn x) => !x.Dead && !AnkhDefOf.ankhTraits.TrueForAll(t => x.story.traits.HasTrait(t))).ToList();
 
                             if(pawns.NullOrEmpty())
                                 throw new Exception();
@@ -1035,7 +1035,7 @@ namespace Ankh
                                 Trait trait = null;
                                 do
                                 {
-                                    trait = new Trait(AnkhDefs.ankhTraits.RandomElement(), 0, true);
+                                    trait = new Trait(AnkhDefOf.ankhTraits.RandomElement(), 0, true);
                                     if(!p.story.traits.HasTrait(trait.def))
                                         p.story.traits.GainTrait(trait);
                                 }while (!p.story.traits.allTraits.Contains(trait));
@@ -1132,7 +1132,7 @@ namespace Ankh
                                 ThingWithComps weapon = ThingMaker.MakeThing(weaponDef, weaponDef.MadeFromStuff ? ThingDefOf.Plasteel : null) as ThingWithComps;
                                 weapon.TryGetComp<CompQuality>().SetQuality(Rand.Bool ? QualityCategory.Normal : Rand.Bool ? QualityCategory.Good : QualityCategory.Superior, ArtGenerationContext.Colony);
                                 pawn.equipment.AddEquipment(weapon);
-                                pawn.story.traits.GainTrait(new Trait(AnkhDefs.ankhTraits.RandomElement(), 0, true));
+                                pawn.story.traits.GainTrait(new Trait(AnkhDefOf.ankhTraits.RandomElement(), 0, true));
                             }
 
                             DropPodUtility.DropThingsNear(parms.spawnCenter, map, pawns.Cast<Thing>(), parms.raidPodOpenDelay, false, true, true);
@@ -1178,7 +1178,7 @@ namespace Ankh
         static void PrepareDefs()
         {
             MethodInfo shortHashGiver = typeof(ShortHashGiver).GetMethod("GiveShortHash", BindingFlags.NonPublic | BindingFlags.Static);
-            Type t = typeof(AnkhDefs);
+            Type t = typeof(AnkhDefOf);
             StatDefOf.MeleeHitChance.maxValue = float.MaxValue;
 
             #region GameConditions
@@ -1196,7 +1196,7 @@ namespace Ankh
                 wrathConditionDef.ResolveReferences();
                 wrathConditionDef.PostLoad();
                 DefDatabase<GameConditionDef>.Add(wrathConditionDef);
-                AnkhDefs.wrathCondition = wrathConditionDef;
+                AnkhDefOf.wrathCondition = wrathConditionDef;
                 shortHashGiver.Invoke(null, new object[] { wrathConditionDef, t });
             }
             #endregion
@@ -1214,7 +1214,7 @@ namespace Ankh
                 miracleHeal.PostLoad();
                 shortHashGiver.Invoke(null, new object[] { miracleHeal, t });
                 DefDatabase<IncidentDef>.Add(miracleHeal);
-                AnkhDefs.miracleHeal = miracleHeal;
+                AnkhDefOf.miracleHeal = miracleHeal;
             }
             #endregion
             #region Buildings
@@ -1303,7 +1303,7 @@ namespace Ankh
                 DefDatabase<ThingDef>.Add(zap.frameDef);
                 zap.designationCategory.ResolveReferences();
                 zap.designationCategory.PostLoad();
-                AnkhDefs.zapActivator = zap;
+                AnkhDefOf.zapActivator = zap;
             }
             {
                 ThingDef therm = new ThingDef()
@@ -1389,7 +1389,7 @@ namespace Ankh
                 DefDatabase<ThingDef>.Add(therm.frameDef);
                 therm.designationCategory.ResolveReferences();
                 therm.designationCategory.PostLoad();
-                AnkhDefs.thermActivator = therm;
+                AnkhDefOf.thermActivator = therm;
             }
             {
                 ThingDef peg = new ThingDef()
@@ -1475,7 +1475,7 @@ namespace Ankh
                 DefDatabase<ThingDef>.Add(peg.frameDef);
                 peg.designationCategory.ResolveReferences();
                 peg.designationCategory.PostLoad();
-                AnkhDefs.pegActivator = peg;
+                AnkhDefOf.pegActivator = peg;
             }
             {
                 ThingDef repo = new ThingDef()
@@ -1562,7 +1562,7 @@ namespace Ankh
                 repo.designationCategory.ResolveReferences();
                 repo.designationCategory.PostLoad();
 
-                AnkhDefs.repoActivator = repo;
+                AnkhDefOf.repoActivator = repo;
             }
             {
                 ThingDef bob = new ThingDef()
@@ -1648,7 +1648,7 @@ namespace Ankh
                 DefDatabase<ThingDef>.Add(bob.frameDef);
                 bob.designationCategory.ResolveReferences();
                 bob.designationCategory.PostLoad();
-                AnkhDefs.bobActivator = bob;
+                AnkhDefOf.bobActivator = bob;
             }
             {
                 ThingDef rootsy = new ThingDef()
@@ -1734,7 +1734,7 @@ namespace Ankh
                 DefDatabase<ThingDef>.Add(rootsy.frameDef);
                 rootsy.designationCategory.ResolveReferences();
                 rootsy.designationCategory.PostLoad();
-                AnkhDefs.rootsyActivator = rootsy;
+                AnkhDefOf.rootsyActivator = rootsy;
             }
             {
                 ThingDef humour = new ThingDef()
@@ -1820,7 +1820,7 @@ namespace Ankh
                 DefDatabase<ThingDef>.Add(humour.frameDef);
                 humour.designationCategory.ResolveReferences();
                 humour.designationCategory.PostLoad();
-                AnkhDefs.humourActivator = humour;
+                AnkhDefOf.humourActivator = humour;
             }
             {
                 ThingDef dorf = new ThingDef()
@@ -1906,7 +1906,7 @@ namespace Ankh
                 DefDatabase<ThingDef>.Add(dorf.frameDef);
                 dorf.designationCategory.ResolveReferences();
                 dorf.designationCategory.PostLoad();
-                AnkhDefs.dorfActivator = dorf;
+                AnkhDefOf.dorfActivator = dorf;
             }
             #endregion
             #region Thoughts
@@ -1931,7 +1931,7 @@ namespace Ankh
                 fnarghWrath.PostLoad();
                 shortHashGiver.Invoke(null, new object[] { fnarghWrath, t });
                 DefDatabase<ThoughtDef>.Add(fnarghWrath);
-                AnkhDefs.fnarghWrath = fnarghWrath;
+                AnkhDefOf.fnarghWrath = fnarghWrath;
             }
             {
                 ThoughtDef fnarghFavor = new ThoughtDef()
@@ -1954,7 +1954,7 @@ namespace Ankh
                 fnarghFavor.PostLoad();
                 shortHashGiver.Invoke(null, new object[] { fnarghFavor, t });
                 DefDatabase<ThoughtDef>.Add(fnarghFavor);
-                AnkhDefs.fnarghFavor = fnarghFavor;
+                AnkhDefOf.fnarghFavor = fnarghFavor;
             }
             #endregion
             #region Traits
@@ -1977,8 +1977,8 @@ namespace Ankh
                 fiveKnuckleShuffle.PostLoad();
                 shortHashGiver.Invoke(null, new object[] { fiveKnuckleShuffle, t });
                 DefDatabase<TraitDef>.Add(fiveKnuckleShuffle);
-                AnkhDefs.ankhTraits.Add(fiveKnuckleShuffle);
-                AnkhDefs.fiveKnuckleShuffle = fiveKnuckleShuffle;
+                AnkhDefOf.ankhTraits.Add(fiveKnuckleShuffle);
+                AnkhDefOf.fiveKnuckleShuffle = fiveKnuckleShuffle;
             }
             {
                 TraitDef coneOfShame = new TraitDef()
@@ -1999,8 +1999,8 @@ namespace Ankh
                 coneOfShame.PostLoad();
                 shortHashGiver.Invoke(null, new object[] { coneOfShame, t });
                 DefDatabase<TraitDef>.Add(coneOfShame);
-                AnkhDefs.ankhTraits.Add(coneOfShame);
-                AnkhDefs.coneOfShame = coneOfShame;
+                AnkhDefOf.ankhTraits.Add(coneOfShame);
+                AnkhDefOf.coneOfShame = coneOfShame;
             }
             {
                 TraitDef thrustsOfVeneration = new TraitDef()
@@ -2034,7 +2034,7 @@ namespace Ankh
                 thrustsOfVeneration.PostLoad();
                 shortHashGiver.Invoke(null, new object[] { thrustsOfVeneration, t });
                 DefDatabase<TraitDef>.Add(thrustsOfVeneration);
-                AnkhDefs.ankhTraits.Add(thrustsOfVeneration);
+                AnkhDefOf.ankhTraits.Add(thrustsOfVeneration);
             }
             {
                 TraitDef armoredTouch = new TraitDef()
@@ -2078,7 +2078,7 @@ namespace Ankh
                 armoredTouch.PostLoad();
                 shortHashGiver.Invoke(null, new object[] { armoredTouch, t });
                 DefDatabase<TraitDef>.Add(armoredTouch);
-                AnkhDefs.ankhTraits.Add(armoredTouch);
+                AnkhDefOf.ankhTraits.Add(armoredTouch);
             }
             {
                 TraitDef teaAndScones = new TraitDef()
@@ -2107,8 +2107,8 @@ namespace Ankh
                 teaAndScones.PostLoad();
                 shortHashGiver.Invoke(null, new object[] { teaAndScones, t });
                 DefDatabase<TraitDef>.Add(teaAndScones);
-                AnkhDefs.ankhTraits.Add(teaAndScones);
-                AnkhDefs.teaAndScones = teaAndScones;
+                AnkhDefOf.ankhTraits.Add(teaAndScones);
+                AnkhDefOf.teaAndScones = teaAndScones;
             }
             #endregion
             #region Hediffs
@@ -2144,7 +2144,7 @@ namespace Ankh
                 fiveKnuckleShuffleHediff.PostLoad();
                 shortHashGiver.Invoke(null, new object[] { fiveKnuckleShuffleHediff, t });
                 DefDatabase<HediffDef>.Add(fiveKnuckleShuffleHediff);
-                AnkhDefs.fiveKnuckleShuffleHediff = fiveKnuckleShuffleHediff;
+                AnkhDefOf.fiveKnuckleShuffleHediff = fiveKnuckleShuffleHediff;
             }
             {
                 HediffDef coneOfShameHediff = new HediffDef()
@@ -2178,7 +2178,7 @@ namespace Ankh
                 coneOfShameHediff.PostLoad();
                 shortHashGiver.Invoke(null, new object[] { coneOfShameHediff, t });
                 DefDatabase<HediffDef>.Add(coneOfShameHediff);
-                AnkhDefs.coneOfShameHediff = coneOfShameHediff;
+                AnkhDefOf.coneOfShameHediff = coneOfShameHediff;
             }
             #endregion
         }
