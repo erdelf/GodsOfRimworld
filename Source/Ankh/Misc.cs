@@ -24,21 +24,23 @@ namespace Ankh
         {
             base.OnOpen();
             this.size = State <= 1 ? SmallSize : FullSize;
-
-            this.relevantSchedules = BehaviourInterpreter._instance.instanceVariableHolder.scheduler.Where(kvp => kvp.Key < Find.TickManager.TicksGame + GenDate.TicksPerDay).ToList().ListFullCopyOrNull();
-            Log.Message(this.relevantSchedules.Count.ToString());
-            this.relevantSchedules.ForEach(kvp => kvp.Value.RemoveAll(s => !s[0].Equals("callTheGods") || !s[2].Equals("False")));
-            Log.Message(this.relevantSchedules.Count.ToString());
-            this.relevantSchedules.RemoveAll(kvp => kvp.Value.NullOrEmpty());
-            Log.Message(this.relevantSchedules.Count.ToString());
+            List<KeyValuePair<int, List<string[]>>> scheduleList;
+            scheduleList = BehaviourInterpreter._instance.instanceVariableHolder.scheduler.Where(kvp => kvp.Key < Find.TickManager.TicksGame + GenDate.TicksPerDay).ToList().ListFullCopyOrNull();
+            scheduleList.ForEach(kvp => kvp.Value.RemoveAll(s => !s[0].Equals("callTheGods") || !s[2].Equals("False")));
+            scheduleList.RemoveAll(kvp => kvp.Value.NullOrEmpty());
             float longitude = Find.WorldGrid.LongLatOf(this.SelThing.Map.Tile).x;
-            this.relevantSchedules.Select(kvp => new KeyValuePair<float, List<string[]>>(GenDate.HourInteger(GenDate.TickGameToAbs(kvp.Key), longitude), kvp.Value));
-            Log.Message(this.relevantSchedules.Count.ToString());
+
+            this.relevantSchedules = scheduleList.Select(kvp =>
+            {
+                float hour = GenDate.HourFloat(GenDate.TickGameToAbs(kvp.Key), longitude);
+                int hourInt = Mathf.FloorToInt(hour);
+                return new KeyValuePair<string, List<string[]>>((hourInt%24).ToString("##") + ":" + Mathf.RoundToInt((hour - hourInt) * 60f).ToString("##"), kvp.Value);
+            }).ToList();
         }
 
         Vector2 scrollPosition = Vector2.zero;
 
-        List<KeyValuePair<int, List<string[]>>> relevantSchedules;
+        List<KeyValuePair<string, List<string[]>>> relevantSchedules;
 
         protected override void FillTab()
         {
@@ -51,21 +53,19 @@ namespace Ankh
             {
                 GUI.BeginGroup(rect);
                 Widgets.Label(rect.TopPart(20f), "The gods are pleased for now. Enjoy their gifts");
-                Widgets.BeginScrollView(rect.BottomPart(80f), ref this.scrollPosition, new Rect(0f, 0f, rect.width, this.relevantSchedules.Count * 55f));
+                //Widgets.BeginScrollView(rect.BottomPart(80f), ref this.scrollPosition, new Rect(rect.x, rect.y, rect.width, this.relevantSchedules.Count * 55f));
                 int num = 0;
                 this.relevantSchedules.ForEach(kvp =>
                 {
-                    Widgets.DrawLineHorizontal(0, num, rect.width);
-                    Widgets.Label(new Rect(0f, num + 5, rect.width - 16f, 40f), kvp.Key.ToString());
+                    Widgets.DrawLineHorizontal(rect.x, num, rect.width);
                     num += 45;
                     kvp.Value.ForEach(s =>
                     {
-                        Log.Message(s[1]);
-                        Widgets.Label(new Rect(0f, num + 5, rect.width - 16f, 40f), s[1]);
+                        Widgets.Label(new Rect(rect.x, num + 5, rect.width - 16f, 40f), s[1] + "\t" + kvp.Key.ToString());
                         num += 50;
                     });
                 });
-                Widgets.EndScrollView();
+                //Widgets.EndScrollView();
                 GUI.EndGroup();
             }
         }

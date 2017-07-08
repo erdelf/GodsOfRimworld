@@ -336,18 +336,19 @@ namespace Ankh
                 IntVec3 loc = map.AllCells.Where(ivc => ivc.Standable(map) && !ivc.Fogged(map) && ivc.GetTerrain(map).affordances.Contains(TerrainAffordance.Heavy) && !ivc.CloseToEdge(map, Mathf.RoundToInt(map.Size.LengthHorizontal/4))).RandomElement();
                 Find.LetterStack.ReceiveLetter("Altar appeared", "An altar of the Gods appeared. They might have something to offer.", LetterDefOf.Good, 
                     thing = GenSpawn.Spawn(ThingMaker.MakeThing(AnkhDefOf.sacrificeAltar, GenStuff.RandomStuffFor(AnkhDefOf.sacrificeAltar)), loc, map));
-                
+                thing.SetFactionDirect(Faction.OfPlayer);
+
                 CellRect occupied = GenAdj.OccupiedRect(thing);
 
                 Predicate<IntVec3> locCheck = new Predicate<IntVec3>(ivc =>
                 {
-                    return !(occupied.Contains(ivc)) && ivc.Standable(map) && !ivc.Fogged(map);
+                    return !occupied.Contains(ivc) && ivc.Standable(map) && !ivc.Fogged(map) && !ivc.GetThingList(map).Any(t => t.Faction == Faction.OfPlayer);
                 });
 
                 CellRect.CenteredOn(loc, 10).Cells.Where(ivc => locCheck(ivc)).ToList().ForEach(c => 
                     map.weatherManager.eventHandler.AddEvent(new WeatherEvent_LightningStrike(map, c)));
 
-                CellRect.CenteredOn(loc, 5).Cells.Where(ivc => locCheck(ivc)).ToList().ForEach(c =>
+                occupied.ExpandedBy(2).Cells.Where(ivc => locCheck(ivc)).ToList().ForEach(c =>
                 {
                     Vector3 vc = c.ToVector3();
                     MoteMaker.ThrowMicroSparks(vc, map);
@@ -355,6 +356,7 @@ namespace Ankh
                     MoteMaker.ThrowFireGlow(c, map, 10f);
                     MoteMaker.ThrowLightningGlow(vc, map, 10f);
                     MoteMaker.ThrowMetaPuff(vc, map);
+                    map.terrainGrid.SetTerrain(loc, TerrainDefOf.Concrete);
                 });
 
 
