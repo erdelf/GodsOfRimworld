@@ -1212,6 +1212,7 @@ namespace Ankh
                     label = "miracle heal",
                     targetType = IncidentTargetType.MapPlayerHome,
                     workerClass = typeof(CustomIncidentClasses.MiracleHeal),
+                    category = IncidentCategory.Misc,
                     baseChance = 10
                 };
                 miracleHeal.ResolveReferences();
@@ -1227,6 +1228,7 @@ namespace Ankh
                     label = "altar Appearance",
                     targetType = IncidentTargetType.MapPlayerHome,
                     workerClass = typeof(CustomIncidentClasses.AltarAppearance),
+                    category = IncidentCategory.Misc,
                     baseChance = 10
                 };
                 altarAppearance.ResolveReferences();
@@ -1941,11 +1943,12 @@ namespace Ankh
                     altitudeLayer = AltitudeLayer.Building,
                     leaveResourcesWhenKilled = true,
                     rotatable = false,
-                    stuffCategories = new List<StuffCategoryDef>(3) { StuffCategoryDefOf.Metallic, StuffCategoryDefOf.Stony, StuffCategoryDefOf.Woody },
+                    stuffCategories = new List<StuffCategoryDef>(3) { StuffCategoryDefOf.Metallic, StuffCategoryDefOf.Stony},
+                    costStuffCount = 1,
                     graphicData = new GraphicData()
                     {
                         texPath = "HumanAltar",
-                        graphicClass = typeof(Graphic_Single),
+                        graphicClass = typeof(Graphic_Multi),
                         shaderType = ShaderType.CutoutComplex,
                         drawSize = new Vector2(4, 2)
                     },

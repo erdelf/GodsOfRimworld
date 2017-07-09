@@ -336,34 +336,48 @@ namespace Ankh
                 IntVec3 loc = map.AllCells.Where(ivc => ivc.Standable(map) && !ivc.Fogged(map) && ivc.GetTerrain(map).affordances.Contains(TerrainAffordance.Heavy) && !ivc.CloseToEdge(map, Mathf.RoundToInt(map.Size.LengthHorizontal/4))).RandomElement();
                 Find.LetterStack.ReceiveLetter("Altar appeared", "An altar of the Gods appeared. They might have something to offer.", LetterDefOf.Good, 
                     thing = GenSpawn.Spawn(ThingMaker.MakeThing(AnkhDefOf.sacrificeAltar, GenStuff.RandomStuffFor(AnkhDefOf.sacrificeAltar)), loc, map));
-                thing.SetFactionDirect(Faction.OfPlayer);
 
                 CellRect occupied = GenAdj.OccupiedRect(thing);
 
                 Predicate<IntVec3> locCheck = new Predicate<IntVec3>(ivc =>
                 {
-                    return !occupied.Contains(ivc) && ivc.Standable(map) && !ivc.Fogged(map) && !ivc.GetThingList(map).Any(t => t.Faction == Faction.OfPlayer);
+                    return ivc.Standable(map) && !ivc.Fogged(map) && !ivc.GetThingList(map).Any(t => t.Faction == Faction.OfPlayer) && !GenAdjFast.AdjacentCells8Way(ivc).Any(iv => iv.GetThingList(map).Any(t => t.Faction == Faction.OfPlayer));
                 });
 
-                CellRect.CenteredOn(loc, 10).Cells.Where(ivc => locCheck(ivc)).ToList().ForEach(c => 
-                    map.weatherManager.eventHandler.AddEvent(new WeatherEvent_LightningStrike(map, c)));
+                CellRect.CenteredOn(loc, 10).Cells.Where(ivc => locCheck(ivc) && !occupied.Contains(ivc)).ToList().ForEach(c =>
+                {
+                    map.weatherManager.eventHandler.AddEvent(new WeatherEvent_LightningStrike(map, c));
+                    BehaviourInterpreter._instance.WaitAndExecute(() => c.GetThingList(map).ForEach(t => t.TakeDamage(new DamageInfo(DamageDefOf.Extinguish, 5000))));
+                });
 
+                occupied.ExpandedBy(5).Cells.ToList().ForEach(c =>
+                {
+                    map.snowGrid.SetDepth(c, 0f);
+                    if (map.terrainGrid.CanRemoveTopLayerAt(c))
+                        map.terrainGrid.RemoveTopLayer(c, false);
+                    map.terrainGrid.SetTerrain(c, DefDatabase<TerrainDef>.GetNamedSilentFail(thing.Stuff.defName + "Tile") ?? DefDatabase<TerrainDef>.GetNamedSilentFail("Tile" + thing.Stuff.LabelCap) ?? DefDatabase<TerrainDef>.GetNamedSilentFail("Tile" + thing.Stuff.label.Split(' ')[0].CapitalizeFirst()) ??  TerrainDefOf.Concrete);
+                });
+
+                FieldInfo moteCount = typeof(MoteCounter).GetField("moteCount", BindingFlags.NonPublic | BindingFlags.Instance);
+                
                 occupied.ExpandedBy(2).Cells.Where(ivc => locCheck(ivc)).ToList().ForEach(c =>
                 {
+                    moteCount.SetValue(map.moteCounter, 0);
+
                     Vector3 vc = c.ToVector3();
                     MoteMaker.ThrowMicroSparks(vc, map);
-                    MoteMaker.ThrowHeatGlow(c, map, 10f);
-                    MoteMaker.ThrowFireGlow(c, map, 10f);
-                    MoteMaker.ThrowLightningGlow(vc, map, 10f);
+                    MoteMaker.ThrowHeatGlow(c, map, 40f);
+                    MoteMaker.ThrowFireGlow(c, map, 50f);
+                    MoteMaker.ThrowLightningGlow(vc, map, 60f);
                     MoteMaker.ThrowMetaPuff(vc, map);
-                    map.terrainGrid.SetTerrain(loc, TerrainDefOf.Concrete);
                 });
 
+                map.weatherDecider.DisableRainFor(5000);
+                thing.SetFactionDirect(Faction.OfPlayer);
 
-
-                if(Find.VisibleMap != map)
+                if (Find.VisibleMap != map)
                     Current.Game.VisibleMap = map;
-                Find.CameraDriver.SetRootPosAndSize(Find.VisibleMap.rememberedCameraPos.rootPos, 11f);
+                Find.CameraDriver.SetRootPosAndSize(Find.VisibleMap.rememberedCameraPos.rootPos, 50f);
                 Find.CameraDriver.JumpToVisibleMapLoc(loc);
                 return true;
             }

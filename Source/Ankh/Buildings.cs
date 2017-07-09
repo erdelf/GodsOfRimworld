@@ -698,7 +698,12 @@ namespace Ankh
                     yield return new FloatMenuOption("Sacrifice " + selPawn.LabelCap, () => selPawn.jobs.TryTakeOrderedJob(new Job(AnkhDefOf.sacrificeToAltar, this)));
             }
 
-            public override IEnumerable<Gizmo> GetGizmos() => new List<Gizmo>();
+            public override IEnumerable<Gizmo> GetGizmos()
+            {
+                Find.ReverseDesignatorDatabase.AllDesignators.Clear();
+                BehaviourInterpreter._instance.WaitAndExecute(() => Find.ReverseDesignatorDatabase.Reinit());
+                return new List<Gizmo>();
+            }
         }
     }
 }
