@@ -12,7 +12,7 @@ namespace Ankh
         private static readonly Vector2 SmallSize = new Vector2(420f, 100f);
         private static readonly Vector2 FullSize = new Vector2(420f, 480f);
 
-        private static int State => BehaviourInterpreter._instance.instanceVariableHolder.altarState + 20;
+        private static int State => BehaviourInterpreter._instance.instanceVariableHolder.altarState;
 
         public ITab_Wraths()
         {
@@ -52,17 +52,15 @@ namespace Ankh
             } else
             {
                 GUI.BeginGroup(rect);
-                Widgets.Label(rect.TopPart(20f), "The gods are pleased for now. Enjoy their gifts");
+                Widgets.Label(rect.TopPart(20f), "The gods are pleased for now. Enjoy their gifts.\nWraths: " + this.relevantSchedules.Count);
                 //Widgets.BeginScrollView(rect.BottomPart(80f), ref this.scrollPosition, new Rect(rect.x, rect.y, rect.width, this.relevantSchedules.Count * 55f));
-                int num = 0;
+                int num = 45;
                 this.relevantSchedules.ForEach(kvp =>
                 {
-                    Widgets.DrawLineHorizontal(rect.x, num, rect.width);
-                    num += 45;
                     kvp.Value.ForEach(s =>
                     {
                         Widgets.Label(new Rect(rect.x, num + 5, rect.width - 16f, 40f), s[1] + "\t" + kvp.Key.ToString());
-                        num += 50;
+                        num += 45;
                     });
                 });
                 //Widgets.EndScrollView();
