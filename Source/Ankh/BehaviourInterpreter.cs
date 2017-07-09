@@ -1229,7 +1229,7 @@ namespace Ankh
                     targetType = IncidentTargetType.MapPlayerHome,
                     workerClass = typeof(CustomIncidentClasses.AltarAppearance),
                     category = IncidentCategory.Misc,
-                    baseChance = 10
+                    baseChance = 90
                 };
                 altarAppearance.ResolveReferences();
                 altarAppearance.PostLoad();
