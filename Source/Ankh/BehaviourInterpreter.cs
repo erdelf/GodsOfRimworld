@@ -550,7 +550,7 @@ namespace Ankh
 
                             Predicate<BodyPartRecord> bodyPartRecord = delegate (BodyPartRecord x)
                             {
-                                if (!(x.def.dontSuggestAmputation || x.depth == BodyPartDepth.Inside))
+                                if (!(x.def.dontSuggestAmputation || x.depth == BodyPartDepth.Inside || x.def.isConceptual))
                                     return true;
                                 return false;
                             };
