@@ -12,7 +12,7 @@ namespace Ankh
         private static readonly Vector2 SmallSize = new Vector2(420f, 100f);
         private static readonly Vector2 FullSize = new Vector2(420f, 480f);
 
-        private static int State => BehaviourInterpreter._instance.instanceVariableHolder.altarState;
+        private static int State => BehaviourInterpreter._instance.instanceVariableHolder.altarState+5;
 
         public ITab_Wraths()
         {
@@ -34,7 +34,7 @@ namespace Ankh
             {
                 float hour = GenDate.HourFloat(GenDate.TickGameToAbs(kvp.Key), longitude);
                 int hourInt = Mathf.FloorToInt(hour);
-                return new KeyValuePair<string, List<string[]>>((hourInt%24).ToString("##") + ":" + Mathf.RoundToInt((hour - hourInt) * 60f).ToString("##"), kvp.Value);
+                return new KeyValuePair<string, List<string[]>>((hourInt%24).ToString("D2") + ":" + Mathf.RoundToInt((hour - hourInt) * 60f).ToString("D2"), kvp.Value);
             }).ToList();
         }
 
@@ -52,8 +52,8 @@ namespace Ankh
             } else
             {
                 GUI.BeginGroup(rect);
-                Widgets.Label(rect.TopPart(20f), "The gods are pleased for now. Enjoy their gifts.\nWraths: " + this.relevantSchedules.Count);
-                //Widgets.BeginScrollView(rect.BottomPart(80f), ref this.scrollPosition, new Rect(rect.x, rect.y, rect.width, this.relevantSchedules.Count * 55f));
+                Widgets.Label(rect.TopPart(0.10f), "The gods are pleased for now. Enjoy their gifts.\nWraths: " + this.relevantSchedules.SelectMany(kvp => kvp.Value).Count());
+                Widgets.BeginScrollView(rect.BottomPart(0.90f).ContractedBy(20f), ref this.scrollPosition, new Rect(rect.x, rect.y, rect.width/3*2, this.relevantSchedules.SelectMany(kvp => kvp.Value).Count() * 55f));
                 int num = 45;
                 this.relevantSchedules.ForEach(kvp =>
                 {
@@ -63,7 +63,7 @@ namespace Ankh
                         num += 45;
                     });
                 });
-                //Widgets.EndScrollView();
+                Widgets.EndScrollView();
                 GUI.EndGroup();
             }
         }
