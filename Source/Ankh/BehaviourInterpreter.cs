@@ -717,6 +717,14 @@ namespace Ankh
                         if(favor)
                         {
                             pawn.SetFaction(Faction.OfPlayer);
+
+                            TrainableUtility.TrainableDefsInListOrder.ForEach(td =>
+                            {
+                                if(pawn.training.CanAssignToTrain(td, out bool visible).Accepted)
+                                    while(!pawn.training.IsCompleted(td))
+                                        pawn.training.Train(td, map.mapPawns.FreeColonists.RandomElement());
+                            });
+
                             pawn.jobs.TryTakeOrderedJob(new Job(JobDefOf.GotoWander, map.areaManager.Home.ActiveCells.Where(iv => iv.Standable(map)).RandomElement()));
                             if (letter)
                                 Find.LetterStack.ReceiveLetter("moo's favor",
