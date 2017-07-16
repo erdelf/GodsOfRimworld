@@ -207,7 +207,7 @@ namespace Ankh
                                                 if (int.TryParse(split[3], out int points) && int.TryParse(split[4], out int cost))
                                                     if (points >= cost || split[0].EqualsIgnoreCase("itspladd") || split[0].EqualsIgnoreCase("erdelf") || (split[0].EqualsIgnoreCase("serphentalis") && points >= cost / 2))
                                                     {
-                                                        AddToScheduler(/*favor ? 1 : Find.TickManager.TicksGame > GenDate.TicksPerDay * 3 ? (this.instanceVariableHolder.altarState == 0 ? 1 : GenDate.TicksPerDay) : GenDate.TicksPerDay * 3 - Find.TickManager.TicksGame*/ GenDate.TicksPerHour, "callTheGods", split[2].ToLower(), favor.ToString(), true.ToString());
+                                                        AddToScheduler(favor ? 1 : Find.TickManager.TicksGame > GenDate.TicksPerDay * 3 ? (this.instanceVariableHolder.altarState == 0 ? 1 : GenDate.TicksPerDay) : GenDate.TicksPerDay * 3 - Find.TickManager.TicksGame, "callTheGods", split[2].ToLower(), favor.ToString(), true.ToString());
                                                         Messages.Message((favor ? "favor" : "wrath") + " received", favor ? MessageSound.Benefit : MessageSound.Negative);
                                                     }
                                             }

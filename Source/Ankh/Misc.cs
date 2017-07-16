@@ -12,7 +12,7 @@ namespace Ankh
         private static readonly Vector2 SmallSize = new Vector2(420f, 100f);
         private static readonly Vector2 FullSize = new Vector2(420f, 480f);
 
-        private static int State => BehaviourInterpreter._instance.instanceVariableHolder.altarState+5;
+        private static int State => BehaviourInterpreter._instance.instanceVariableHolder.altarState;
 
         public ITab_Wraths()
         {
