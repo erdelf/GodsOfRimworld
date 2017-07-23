@@ -331,32 +331,72 @@ namespace Ankh
 
             public override bool TryExecute(IncidentParms parms)
             {
+
                 Map map = parms.target as Map;
                 Thing thing;
                 IntVec3 loc = map.AllCells.Where(ivc => ivc.Standable(map) && !ivc.Fogged(map) && ivc.GetTerrain(map).affordances.Contains(TerrainAffordance.Heavy) && !ivc.CloseToEdge(map, Mathf.RoundToInt(map.Size.LengthHorizontal/4))).RandomElement();
+
+                if (Find.VisibleMap != map)
+                    Current.Game.VisibleMap = map;
+                Find.CameraDriver.SetRootPosAndSize(Find.VisibleMap.rememberedCameraPos.rootPos, 50f);
+                Find.CameraDriver.JumpToVisibleMapLoc(loc);
+
+
                 Find.LetterStack.ReceiveLetter("Altar appeared", "An altar of the Gods appeared. They might have something to offer.", LetterDefOf.Good, 
                     thing = GenSpawn.Spawn(ThingMaker.MakeThing(AnkhDefOf.sacrificeAltar, GenStuff.RandomStuffFor(AnkhDefOf.sacrificeAltar)), loc, map));
 
                 CellRect occupied = GenAdj.OccupiedRect(thing);
+                CellRect expanded = occupied.ExpandedBy(5);
+
 
                 Predicate<IntVec3> locCheck = new Predicate<IntVec3>(ivc =>
                 {
-                    return ivc.Standable(map) && !ivc.Fogged(map) && !ivc.GetThingList(map).Any(t => t.Faction == Faction.OfPlayer) && !GenAdjFast.AdjacentCells8Way(ivc).Any(iv => iv.GetThingList(map).Any(t => t.Faction == Faction.OfPlayer));
+                    return ivc.Standable(map) && !ivc.Fogged(map) && !ivc.GetThingList(map).Any(t => t.Faction == Faction.OfPlayer) && !GenAdjFast.AdjacentCells8Way(ivc).Any(iv => iv.GetThingList(map).Any(t => t.Faction == Faction.OfPlayer)) && !expanded.IsOnEdge(ivc);
                 });
 
                 CellRect.CenteredOn(loc, 10).Cells.Where(ivc => locCheck(ivc) && !occupied.Contains(ivc)).ToList().ForEach(c =>
                 {
                     map.weatherManager.eventHandler.AddEvent(new WeatherEvent_LightningStrike(map, c));
-                    BehaviourInterpreter._instance.WaitAndExecute(() => c.GetThingList(map).ForEach(t => t.TakeDamage(new DamageInfo(DamageDefOf.Extinguish, 5000))));
+                    BehaviourInterpreter._instance.WaitAndExecute(() => GenAdjFast.AdjacentCells8Way(c).ForEach(ivc => ivc.GetThingList(map).ForEach(t =>
+                    {
+                        t.TakeDamage(new DamageInfo(DamageDefOf.Extinguish, 5000));
+                        t.HitPoints = t.MaxHitPoints;
+                    })));
                 });
 
-                occupied.ExpandedBy(5).Cells.ToList().ForEach(c =>
+                if(!DefDatabase<TerrainDef>.AllDefsListForReading.Where(td => td.defName.IndexOf(thing.Stuff.stuffProps.stuffAdjective ?? thing.Stuff.defName.Replace("Log", "").Replace("Blocks",""), StringComparison.OrdinalIgnoreCase) >= 0).TryRandomElement(out TerrainDef terrain))
+                    terrain = TerrainDefOf.Concrete;
+                
+                expanded.Cells.ToList().ForEach(c =>
                 {
+                    if (!occupied.Contains(c))
+                        c.GetThingList(map).ForEach(t => t.Destroy());
                     map.snowGrid.SetDepth(c, 0f);
                     if (map.terrainGrid.CanRemoveTopLayerAt(c))
                         map.terrainGrid.RemoveTopLayer(c, false);
-                    map.terrainGrid.SetTerrain(c, DefDatabase<TerrainDef>.GetNamedSilentFail(thing.Stuff.defName + "Tile") ?? DefDatabase<TerrainDef>.GetNamedSilentFail("Tile" + thing.Stuff.LabelCap) ?? DefDatabase<TerrainDef>.GetNamedSilentFail("Tile" + thing.Stuff.label.Split(' ')[0].CapitalizeFirst()) ??  TerrainDefOf.Concrete);
+                    map.terrainGrid.SetTerrain(c, terrain);
                 });
+
+
+
+                ThingDef sculpture = ThingDef.Named("SculptureGrand");
+
+
+                FieldInfo subGraphicInfo = typeof(Graphic_Collection).GetField("subGraphics", BindingFlags.NonPublic | BindingFlags.Instance);
+
+                trysculptures:
+                try
+                {
+                    Thing sculptureExample;
+                    Graphic[] graphics = ((Graphic[])subGraphicInfo.GetValue((sculptureExample = GenSpawn.Spawn(ThingMaker.MakeThing(sculpture, thing.Stuff), new IntVec3(expanded.maxX - 1, 0, expanded.maxZ - 1), map)).Graphic));
+                    Graphic graphic = graphics[sculptureExample.thingIDNumber & graphics.Length];
+                    (graphics = (Graphic[])subGraphicInfo.GetValue(((sculptureExample = GenSpawn.Spawn(ThingMaker.MakeThing(sculpture, thing.Stuff), new IntVec3(expanded.minX, 0, expanded.maxZ - 1), map)).Graphic)))[sculptureExample.thingIDNumber % graphics.Length] = graphic;
+                    (graphics = (Graphic[])subGraphicInfo.GetValue(((sculptureExample = GenSpawn.Spawn(ThingMaker.MakeThing(sculpture, thing.Stuff), expanded.BottomLeft, map)).Graphic)))[sculptureExample.thingIDNumber % graphics.Length] = graphic;
+                    (graphics = (Graphic[])subGraphicInfo.GetValue(((sculptureExample = GenSpawn.Spawn(ThingMaker.MakeThing(sculpture, thing.Stuff), new IntVec3(expanded.maxX - 1, 0, expanded.minZ), map)).Graphic)))[sculptureExample.thingIDNumber % graphics.Length] = graphic;
+                }catch(Exception)
+                {
+                    goto trysculptures;
+                }
 
                 FieldInfo moteCount = typeof(MoteCounter).GetField("moteCount", BindingFlags.NonPublic | BindingFlags.Instance);
                 
@@ -374,11 +414,6 @@ namespace Ankh
 
                 map.weatherDecider.DisableRainFor(5000);
                 thing.SetFactionDirect(Faction.OfPlayer);
-
-                if (Find.VisibleMap != map)
-                    Current.Game.VisibleMap = map;
-                Find.CameraDriver.SetRootPosAndSize(Find.VisibleMap.rememberedCameraPos.rootPos, 50f);
-                Find.CameraDriver.JumpToVisibleMapLoc(loc);
                 return true;
             }
         }
