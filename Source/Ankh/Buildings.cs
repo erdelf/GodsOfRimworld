@@ -12,7 +12,7 @@ namespace Ankh
 {
     public class Buildings
     {
-        public class Building_ZAP : Building, IAttackTargetSearcher
+        public class Building_Zap : Building, IAttackTargetSearcher
         {
             public Thing Thing => this;
 
@@ -24,30 +24,30 @@ namespace Ankh
 
             public override void TickRare()
             {
-                List<IAttackTarget> potentialTargetsFor = this.Map.attackTargetsCache.GetPotentialTargetsFor(this);
-                LocalTargetInfo target = GenClosest.ClosestThing_Global(this.Position, potentialTargetsFor, 25.9f, t => !((t as Pawn)?.Downed ?? false));
+                List<IAttackTarget> potentialTargetsFor = this.Map.attackTargetsCache.GetPotentialTargetsFor(th: this);
+                LocalTargetInfo target = GenClosest.ClosestThing_Global(center: this.Position, searchSet: potentialTargetsFor, maxDistance: 25.9f, validator: t => !((t as Pawn)?.Downed ?? false));
 
                 if (target.IsValid && BehaviourInterpreter.staticVariables.zapCount > 0)
                 {
-                    this.Map.weatherManager.eventHandler.AddEvent(new WeatherEvent_LightningStrike(this.Map, target.Cell));
+                    this.Map.weatherManager.eventHandler.AddEvent(newEvent: new WeatherEvent_LightningStrike(map: this.Map, forcedStrikeLoc: target.Cell));
                     BehaviourInterpreter.staticVariables.zapCount--;
                 }
             }
 
             public override void DrawExtraSelectionOverlays()
             {
-                GenDraw.DrawRadiusRing(this.DrawPos.ToIntVec3(), 25.9f);
+                GenDraw.DrawRadiusRing(center: this.DrawPos.ToIntVec3(), radius: 25.9f);
                 base.DrawExtraSelectionOverlays();
             }
 
             public override string GetInspectString()
             {
-                StringBuilder sb = new StringBuilder(base.GetInspectString());
-                sb.AppendLine("Zap favors: " + BehaviourInterpreter.staticVariables.zapCount);
+                StringBuilder sb = new StringBuilder(value: base.GetInspectString());
+                sb.AppendLine(value: "Zap favors: " + BehaviourInterpreter.staticVariables.zapCount);
                 return sb.ToString().Trim();
             }
         }
-        public class Building_THERM : Building
+        public class Building_Therm : Building
         {
             public override IEnumerable<Gizmo> GetGizmos()
             {
@@ -60,53 +60,41 @@ namespace Ankh
                     {
                         defaultLabel = "Therm's Revelation",
                         defaultDesc = "Channel Therm's favor deep into the earth to uncover a steam geyser.",
-                        icon = ContentFinder<Texture2D>.Get("Things/Building/Natural/SteamGeyser", true),
+                        icon = ContentFinder<Texture2D>.Get(itemPath: "Things/Building/Natural/SteamGeyser"),
                         activateSound = SoundDefOf.Click
                     };
                     therm.action = delegate
                     {
-                        Find.Targeter.BeginTargeting(new TargetingParameters()
+                        Find.Targeter.BeginTargeting(targetParams: new TargetingParameters()
                         {
                             validator = c =>
                             {
-                                if (c.Cell.Fogged(Find.VisibleMap) || !c.IsValid || !c.Cell.InBounds(Find.VisibleMap))
-                                {
-                                    return false;
-                                }
-                                List<IntVec3> cells = GenAdj.CellsOccupiedBy(c.Cell, Rot4.North, ThingDefOf.GeothermalGenerator.Size).ToList();
+                                if (c.Cell.Fogged(map: Find.CurrentMap) || !c.IsValid || !c.Cell.InBounds(map: Find.CurrentMap)) return false;
+                                List<IntVec3> cells = GenAdj.CellsOccupiedBy(center: c.Cell, rotation: Rot4.North, size: ThingDefOf.GeothermalGenerator.Size).ToList();
 
                                 foreach (IntVec3 current in cells)
-                                {
-                                    if(current.InBounds(Find.VisibleMap))
-                                    if (!current.Standable(Find.VisibleMap) || current.GetFirstThing(Find.VisibleMap, ThingDefOf.SteamGeyser) != null || !current.GetTerrain(Find.VisibleMap).affordances.Contains(TerrainAffordance.Heavy))
-                                        return false;
-                                }
-                                bool returns = Find.VisibleMap.reachability.CanReachColony(c.Cell);
+                                    if(current.InBounds(map: Find.CurrentMap))
+                                        if (!current.Standable(map: Find.CurrentMap) || current.GetFirstThing(map: Find.CurrentMap, def: ThingDefOf.SteamGeyser) != null || !current.GetTerrain(map: Find.CurrentMap).affordances.Contains(item: TerrainAffordanceDefOf.Heavy))
+                                            return false;
+                                bool returns = Find.CurrentMap.reachability.CanReachColony(c: c.Cell);
                                 if (returns)
-                                    GenDraw.DrawFieldEdges(cells);
+                                    GenDraw.DrawFieldEdges(cells: cells);
                                 return returns;
                             },
                             canTargetLocations = true
-                        }, lti =>
+                        }, action: lti =>
                         {
-                            Thing geyser = GenSpawn.Spawn(ThingDefOf.SteamGeyser, lti.Cell, Find.VisibleMap);
+                            Thing geyser = GenSpawn.Spawn(def: ThingDefOf.SteamGeyser, loc: lti.Cell, map: Find.CurrentMap);
 
-                            foreach (IntVec3 current in GenAdj.CellsOccupiedBy(geyser))
-                            {
-                                if (current.IsValid && current.InBounds(Find.VisibleMap))
-                                {
-                                    foreach (Thing current2 in Find.VisibleMap.thingGrid.ThingsAt(current))
-                                    {
+                            foreach (IntVec3 current in GenAdj.CellsOccupiedBy(t: geyser))
+                                if (current.IsValid && current.InBounds(map: Find.CurrentMap))
+                                    foreach (Thing current2 in Find.CurrentMap.thingGrid.ThingsAt(c: current))
                                         if (current2 is Plant || current2 is Filth)
-                                        {
-                                            current2.Destroy(DestroyMode.Vanish);
-                                        }
-                                    }
-                                }
-                            }
+                                            current2.Destroy();
+
                             BehaviourInterpreter.staticVariables.thermCount--;
-                            if (BehaviourInterpreter.staticVariables.thermCount > 0) BehaviourInterpreter._instance.WaitAndExecute(() => therm.action());
-                        }, null, null, therm.icon);
+                            if (BehaviourInterpreter.staticVariables.thermCount > 0) BehaviourInterpreter.instance.WaitAndExecute(action: () => therm.action());
+                        }, caster: null, actionWhenFinished: null, mouseAttachment: therm.icon);
                     };
                     yield return therm;
 
@@ -114,50 +102,44 @@ namespace Ankh
                     {
                         defaultLabel = "Therm's  Respite",
                         defaultDesc = "Channel Therm's favor into an inferno to calm the flames.",
-                        icon = ContentFinder<Texture2D>.Get("UI_therm", true),
+                        icon = ContentFinder<Texture2D>.Get(itemPath: "UI_Therm"),
                         activateSound = SoundDefOf.Click
                     };
                     extinguish.action = delegate
                     {
-                        Find.Targeter.BeginTargeting(new TargetingParameters()
+                        Find.Targeter.BeginTargeting(targetParams: new TargetingParameters()
                         {
                             validator = c =>
                             {
-                                if (c.Cell.Fogged(Find.VisibleMap) || !c.IsValid || !c.Cell.InBounds(Find.VisibleMap))
-                                {
-                                    return false;
-                                }
-                                List<IntVec3> cells = GenAdj.CellsOccupiedBy(c.Cell, Rot4.North, new IntVec2(6,6)).ToList();
+                                if (c.Cell.Fogged(map: Find.CurrentMap) || !c.IsValid || !c.Cell.InBounds(map: Find.CurrentMap)) return false;
+                                List<IntVec3> cells = GenAdj.CellsOccupiedBy(center: c.Cell, rotation: Rot4.North, size: new IntVec2(newX: 6,newZ: 6)).ToList();
 
                                 bool returns = false;
                                 foreach (IntVec3 current in cells)
-                                {
-                                    if (current.InBounds(Find.VisibleMap))
-                                        if (current.GetFirstThing(Find.VisibleMap, ThingDefOf.Fire) != null)
-                                        returns = true;
-                                }
+                                    if (current.InBounds(map: Find.CurrentMap))
+                                        if (current.GetFirstThing(map: Find.CurrentMap, def: ThingDefOf.Fire) != null)
+                                            returns = true;
                                 if (returns)
-                                    GenDraw.DrawFieldEdges(cells);
+                                    GenDraw.DrawFieldEdges(cells: cells);
                                 return returns;
                             },
                             canTargetLocations = true
-                        }, c =>
+                        }, action: c =>
                         {
-                            foreach (IntVec3 current in GenAdj.CellsOccupiedBy(c.Cell, Rot4.North, new IntVec2(6,6)))
-                            {
-                                if (current.IsValid && current.InBounds(Find.VisibleMap))
+                            foreach (IntVec3 current in GenAdj.CellsOccupiedBy(center: c.Cell, rotation: Rot4.North, size: new IntVec2(newX: 6,newZ: 6)))
+                                if (current.IsValid && current.InBounds(map: Find.CurrentMap))
                                 {
-                                    Thing[] list = current.GetThingList(Find.VisibleMap).Where(t => t.def == ThingDefOf.Fire).ToArray();
+                                    Thing[] list = current.GetThingList(map: Find.CurrentMap).Where(predicate: t => t.def == ThingDefOf.Fire).ToArray();
                                     foreach(Thing current2 in list)
                                     {
                                         current2.Destroy();
-                                        MoteMaker.ThrowMetaPuff(current.ToVector3(), Find.VisibleMap);
+                                        MoteMaker.ThrowMetaPuff(loc: current.ToVector3(), map: Find.CurrentMap);
                                     }
                                 }
-                            }
+
                             BehaviourInterpreter.staticVariables.thermCount--;
-                            if (BehaviourInterpreter.staticVariables.thermCount > 0) BehaviourInterpreter._instance.WaitAndExecute(() => extinguish.action());  //LongEventHandler.QueueLongEvent(() => extinguish.action(), "", false, null);
-                        }, null, null, extinguish.icon);
+                            if (BehaviourInterpreter.staticVariables.thermCount > 0) BehaviourInterpreter.instance.WaitAndExecute(action: () => extinguish.action());  //LongEventHandler.QueueLongEvent(() => extinguish.action(), "", false, null);
+                        }, caster: null, actionWhenFinished: null, mouseAttachment: extinguish.icon);
                     };
 
                     yield return extinguish;
@@ -166,12 +148,12 @@ namespace Ankh
 
             public override string GetInspectString()
             {
-                StringBuilder sb = new StringBuilder(base.GetInspectString());
-                sb.AppendLine("Therm favors: " + BehaviourInterpreter.staticVariables.thermCount);
+                StringBuilder sb = new StringBuilder(value: base.GetInspectString());
+                sb.AppendLine(value: "Therm favors: " + BehaviourInterpreter.staticVariables.thermCount);
                 return sb.ToString().Trim();
             }
         }
-        public class Building_PEG : Building
+        public class Building_Peg : Building
         {
             public override IEnumerable<Gizmo> GetGizmos()
             {
@@ -184,43 +166,40 @@ namespace Ankh
                     {
                         defaultLabel = "peg's wrath",
                         defaultDesc = "Peg favors you",
-                        icon = ContentFinder<Texture2D>.Get("UI_peg", true),
+                        icon = ContentFinder<Texture2D>.Get(itemPath: "UI_peg"),
                         activateSound = SoundDefOf.Click
                     };
                     bomb.action = delegate
                     {
-                        Find.Targeter.BeginTargeting(new TargetingParameters()
+                        Find.Targeter.BeginTargeting(targetParams: new TargetingParameters()
                         {
                             validator = lti =>
                             {
-                                if (lti.Cell.Fogged(Find.VisibleMap) || !lti.IsValid || !lti.Cell.InBounds(Find.VisibleMap) || Mathf.Sqrt(lti.Cell.DistanceToSquared(this.Position)) > 26f)
-                                {
-                                    return false;
-                                }
-                                int cells = GenRadial.NumCellsInRadius(3.9f);
+                                if (lti.Cell.Fogged(map: Find.CurrentMap) || !lti.IsValid || !lti.Cell.InBounds(map: Find.CurrentMap) || Mathf.Sqrt(f: lti.Cell.DistanceToSquared(b: this.Position)) > 26f) return false;
+                                int cells = GenRadial.NumCellsInRadius(radius: 3.9f);
 
                                 bool returns = false;
                                 for (int i = 0; i < cells; i++)
                                 {
                                     IntVec3 current = lti.Cell + GenRadial.RadialPattern[i];
-                                    if (current.InBounds(Find.VisibleMap))
-                                        if (!current.GetThingList(Find.VisibleMap).NullOrEmpty())
+                                    if (current.InBounds(map: Find.CurrentMap))
+                                        if (!current.GetThingList(map: Find.CurrentMap).NullOrEmpty())
                                             returns = true;
                                 }
                                 if (returns)
-                                    GenDraw.DrawRadiusRing(lti.Cell, 3.9f);
+                                    GenDraw.DrawRadiusRing(center: lti.Cell, radius: 3.9f);
                                 return returns;
                             },
                             canTargetPawns = true,
                             canTargetLocations = true
-                        }, lti =>
+                        }, action: lti =>
                         {
-                            GenExplosion.DoExplosion(lti.Cell, this.Map, 3.9f, DamageDefOf.Bomb, null);
+                            GenExplosion.DoExplosion(center: lti.Cell, map: this.Map, radius: 3.9f, damType: DamageDefOf.Bomb, instigator: null);
 
                             BehaviourInterpreter.staticVariables.pegCount--;
                             if (BehaviourInterpreter.staticVariables.pegCount > 0)
-                                BehaviourInterpreter._instance.WaitAndExecute(() => bomb.action());
-                        }, null, null, bomb.icon);
+                                BehaviourInterpreter.instance.WaitAndExecute(action: () => bomb.action());
+                        }, caster: null, actionWhenFinished: null, mouseAttachment: bomb.icon);
                     };
                     yield return bomb;
                 }
@@ -228,18 +207,18 @@ namespace Ankh
 
             public override void DrawExtraSelectionOverlays()
             {
-                GenDraw.DrawRadiusRing(this.DrawPos.ToIntVec3(), 25.9f);
+                GenDraw.DrawRadiusRing(center: this.DrawPos.ToIntVec3(), radius: 25.9f);
                 base.DrawExtraSelectionOverlays();
             }
 
             public override string GetInspectString()
             {
-                StringBuilder sb = new StringBuilder(base.GetInspectString());
-                sb.AppendLine("Peg favors: " + BehaviourInterpreter.staticVariables.pegCount);
+                StringBuilder sb = new StringBuilder(value: base.GetInspectString());
+                sb.AppendLine(value: "Peg favors: " + BehaviourInterpreter.staticVariables.pegCount);
                 return sb.ToString().Trim();
             }
         }
-        public class Building_REPO : Building
+        public class Building_Repo : Building
         {
 
             public override IEnumerable<Gizmo> GetGizmos()
@@ -253,59 +232,56 @@ namespace Ankh
                     {
                         defaultLabel = "Repo's Restoration",
                         defaultDesc = "Channel Repo's favor into a colonists body.",
-                        icon = ContentFinder<Texture2D>.Get("Things/Mote/FeedbackEquip", true),
+                        icon = ContentFinder<Texture2D>.Get(itemPath: "Things/Mote/FeedbackEquip"),
                         activateSound = SoundDefOf.Click
                     };
                     restore.action = delegate
                     {
-                        Find.Targeter.BeginTargeting(new TargetingParameters()
+                        Find.Targeter.BeginTargeting(targetParams: new TargetingParameters()
                         {
                             validator = c =>
                             {
-                                if (c.Cell.Fogged(Find.VisibleMap) || !c.IsValid || !c.Cell.InBounds(Find.VisibleMap))
-                                {
-                                    return false;
-                                }
-                                return (c.Cell.GetFirstPawn(c.Map)?.IsColonistPlayerControlled ?? false) && Mathf.Sqrt(c.Cell.DistanceToSquared(this.Position)) < 26f;
+                                if (c.Cell.Fogged(map: Find.CurrentMap) || !c.IsValid || !c.Cell.InBounds(map: Find.CurrentMap)) return false;
+                                return (c.Cell.GetFirstPawn(map: c.Map)?.IsColonistPlayerControlled ?? false) && Mathf.Sqrt(f: c.Cell.DistanceToSquared(b: this.Position)) < 26f;
                             },
                             canTargetLocations = false,
                             canTargetPawns = true
-                        }, lti =>
+                        }, action: lti =>
                         {
-                            Pawn p = lti.Thing as Pawn;
+                            Pawn p = (Pawn) lti.Thing;
 
-                            MethodInfo missing = typeof(HealthCardUtility).GetMethod("VisibleHediffs", BindingFlags.Static | BindingFlags.NonPublic);
+                            MethodInfo missing = typeof(HealthCardUtility).GetMethod(name: "VisibleHediffs", bindingAttr: BindingFlags.Static | BindingFlags.NonPublic) ?? throw new ArgumentNullException();
                             BodyPartRecord record = null;
 
-                            if (((IEnumerable<Hediff>)missing.Invoke(null, new object[] { p, false })).Where(
-                                h => h.GetType() == typeof(Hediff_MissingPart)).TryRandomElement(out Hediff result))
+                            if (((IEnumerable<Hediff>)missing.Invoke(obj: null, parameters: new object[] { p, false })).Where(
+                                predicate: h => h.GetType() == typeof(Hediff_MissingPart)).TryRandomElement(result: out Hediff result))
                             {
                                 record = result.Part;
-                                p.health.RestorePart(record);
+                                p.health.RestorePart(part: record);
                             }
-                            else if (p.health.hediffSet.hediffs.Where(h => h is Hediff_Injury || h.IsOld()).TryRandomElement(out result))
+                            else if (p.health.hediffSet.hediffs.Where(predicate: h => h is Hediff_Injury || h.IsPermanent()).TryRandomElement(result: out result))
                             {
                                 record = result.Part;
-                                result.Heal(result.Severity + 1);
+                                result.Heal(amount: result.Severity + 1);
                             }
                             else
                             {
                                 while(record == null)
-                                    record = p.health.hediffSet.GetRandomNotMissingPart(DamageDefOf.Bullet);
+                                    record = p.health.hediffSet.GetRandomNotMissingPart(damDef: DamageDefOf.Bullet);
                             }
 
-                            DefDatabase<RecipeDef>.AllDefsListForReading.Where(rd => (rd.addsHediff?.addedPartProps?.isBionic ?? false) &&
-                                (rd.appliedOnFixedBodyParts?.Select(bdp => bdp.defName).Contains(record.def.defName) ?? false)).TryRandomElement(out RecipeDef recipe);
+                            DefDatabase<RecipeDef>.AllDefsListForReading.Where(predicate: rd => (rd.addsHediff?.addedPartProps?.betterThanNatural ?? false) &&
+                                (rd.appliedOnFixedBodyParts?.Select(selector: bdp => bdp.defName).Contains(value: record.def.defName) ?? false)).TryRandomElement(result: out RecipeDef recipe);
 
                             if (recipe == null)
                                 return;
 
-                            recipe.Worker.ApplyOnPawn(p, record, null, recipe.fixedIngredientFilter.AllowedThingDefs.Select(td => ThingMaker.MakeThing(td, td.MadeFromStuff ? GenStuff.DefaultStuffFor(td) : null)).ToList());
+                            recipe.Worker.ApplyOnPawn(pawn: p, part: record, billDoer: null, ingredients: recipe.fixedIngredientFilter.AllowedThingDefs.Select(selector: td => ThingMaker.MakeThing(def: td, stuff: td.MadeFromStuff ? GenStuff.DefaultStuffFor(bd: td) : null)).ToList(), bill: null);
 
                             BehaviourInterpreter.staticVariables.repoCount--;
                             if (BehaviourInterpreter.staticVariables.repoCount > 0)
-                                BehaviourInterpreter._instance.WaitAndExecute(() => restore.action());
-                        }, null, null, restore.icon);
+                                BehaviourInterpreter.instance.WaitAndExecute(action: () => restore.action());
+                        }, caster: null, actionWhenFinished: null, mouseAttachment: restore.icon);
                     };
                     yield return restore;
                 }
@@ -313,18 +289,18 @@ namespace Ankh
 
             public override void DrawExtraSelectionOverlays()
             {
-                GenDraw.DrawRadiusRing(this.DrawPos.ToIntVec3(), 25.9f);
+                GenDraw.DrawRadiusRing(center: this.DrawPos.ToIntVec3(), radius: 25.9f);
                 base.DrawExtraSelectionOverlays();
             }
 
             public override string GetInspectString()
             {
-                StringBuilder sb = new StringBuilder(base.GetInspectString());
-                sb.AppendLine("Repo favors: " + BehaviourInterpreter.staticVariables.repoCount);
+                StringBuilder sb = new StringBuilder(value: base.GetInspectString());
+                sb.AppendLine(value: "Repo favors: " + BehaviourInterpreter.staticVariables.repoCount);
                 return sb.ToString().Trim();
             }
         }
-        public class Building_BOB : Building
+        public class Building_Bob : Building
         {
             public override IEnumerable<Gizmo> GetGizmos()
             {
@@ -337,32 +313,29 @@ namespace Ankh
                     {
                         defaultLabel = "Bob's Creation",
                         defaultDesc = "Channel Bob's favor.",
-                        icon = ContentFinder<Texture2D>.Get("Things/Mote/FeedbackEquip", true),
+                        icon = ContentFinder<Texture2D>.Get(itemPath: "Things/Mote/FeedbackEquip"),
                         activateSound = SoundDefOf.Click
                     };
                     build.action = delegate
                     {
-                        Find.Targeter.BeginTargeting(new TargetingParameters()
+                        Find.Targeter.BeginTargeting(targetParams: new TargetingParameters()
                         {
                             validator = c =>
                             {
-                                if (c.Cell.Fogged(Find.VisibleMap) || !c.IsValid || !c.Cell.InBounds(Find.VisibleMap) || !c.Cell.Standable(Find.VisibleMap))
-                                {
-                                    return false;
-                                }
-                                return Mathf.Sqrt(c.Cell.DistanceToSquared(this.Position)) < 26f;
+                                if (c.Cell.Fogged(map: Find.CurrentMap) || !c.IsValid || !c.Cell.InBounds(map: Find.CurrentMap) || !c.Cell.Standable(map: Find.CurrentMap)) return false;
+                                return Mathf.Sqrt(f: c.Cell.DistanceToSquared(b: this.Position)) < 26f;
                             },
                             canTargetLocations = true
-                        }, lti =>
+                        }, action: lti =>
                         {
-                            Thing wall = ThingMaker.MakeThing(ThingDefOf.Wall, ThingDefOf.BlocksGranite);
-                            GenSpawn.Spawn(wall, lti.Cell, Find.VisibleMap);
-                            wall.SetFaction(Faction.OfPlayer);
+                            Thing wall = ThingMaker.MakeThing(def: ThingDefOf.Wall, stuff: ThingDefOf.BlocksGranite);
+                            GenSpawn.Spawn(newThing: wall, loc: lti.Cell, map: Find.CurrentMap);
+                            wall.SetFaction(newFaction: Faction.OfPlayer);
 
                             BehaviourInterpreter.staticVariables.bobCount--;
                             if (BehaviourInterpreter.staticVariables.bobCount > 0)
-                                BehaviourInterpreter._instance.WaitAndExecute(() => build.action());
-                        }, null, null, build.icon);
+                                BehaviourInterpreter.instance.WaitAndExecute(action: () => build.action());
+                        }, caster: null, actionWhenFinished: null, mouseAttachment: build.icon);
                     };
                     yield return build;
                 }
@@ -370,18 +343,18 @@ namespace Ankh
 
             public override void DrawExtraSelectionOverlays()
             {
-                GenDraw.DrawRadiusRing(this.DrawPos.ToIntVec3(), 25.9f);
+                GenDraw.DrawRadiusRing(center: this.DrawPos.ToIntVec3(), radius: 25.9f);
                 base.DrawExtraSelectionOverlays();
             }
 
             public override string GetInspectString()
             {
-                StringBuilder sb = new StringBuilder(base.GetInspectString());
-                sb.AppendLine("Bob favors: " + BehaviourInterpreter.staticVariables.bobCount);
+                StringBuilder sb = new StringBuilder(value: base.GetInspectString());
+                sb.AppendLine(value: "Bob favors: " + BehaviourInterpreter.staticVariables.bobCount);
                 return sb.ToString().Trim();
             }
         }
-        public class Building_ROOTSY : Building
+        public class Building_Rootsy : Building
         {
             public override IEnumerable<Gizmo> GetGizmos()
             {
@@ -394,52 +367,46 @@ namespace Ankh
                     {
                         defaultLabel = "Rootsy's  Favor",
                         defaultDesc = "Channel Rootsy's favor.",
-                        icon = ContentFinder<Texture2D>.Get("Things/Mote/Sow", true),
+                        icon = ContentFinder<Texture2D>.Get(itemPath: "Things/Mote/Sow"),
                         activateSound = SoundDefOf.Click
                     };
                     grower.action = delegate
                     {
-                        Find.Targeter.BeginTargeting(new TargetingParameters()
+                        Find.Targeter.BeginTargeting(targetParams: new TargetingParameters()
                         {
                             validator = c =>
                             {
-                                if (c.Cell.Fogged(Find.VisibleMap) || !c.IsValid || !c.Cell.InBounds(Find.VisibleMap))
-                                {
-                                    return false;
-                                }
-                                List<IntVec3> cells = GenAdj.CellsOccupiedBy(c.Cell, Rot4.North, new IntVec2(5, 5)).ToList();
+                                if (c.Cell.Fogged(map: Find.CurrentMap) || !c.IsValid || !c.Cell.InBounds(map: Find.CurrentMap)) return false;
+                                List<IntVec3> cells = GenAdj.CellsOccupiedBy(center: c.Cell, rotation: Rot4.North, size: new IntVec2(newX: 5, newZ: 5)).ToList();
 
                                 bool returns = false;
                                 foreach (IntVec3 current in cells)
-                                {
-                                    if (current.InBounds(Find.VisibleMap))
-                                        if (current.GetThingList(Find.VisibleMap).Any(t => t is Plant))
+                                    if (current.InBounds(map: Find.CurrentMap))
+                                        if (current.GetThingList(map: Find.CurrentMap).Any(predicate: t => t is Plant))
                                             returns = true;
-                                }
                                 if (returns)
-                                    GenDraw.DrawFieldEdges(cells);
+                                    GenDraw.DrawFieldEdges(cells: cells);
                                 return returns;
                             },
                             canTargetLocations = true
-                        }, c =>
+                        }, action: c =>
                         {
-                            foreach (IntVec3 current in GenAdj.CellsOccupiedBy(c.Cell, Rot4.North, new IntVec2(6, 6)))
-                            {
-                                if (current.IsValid && current.InBounds(Find.VisibleMap))
+                            foreach (IntVec3 current in GenAdj.CellsOccupiedBy(center: c.Cell, rotation: Rot4.North, size: new IntVec2(newX: 6, newZ: 6)))
+                                if (current.IsValid && current.InBounds(map: Find.CurrentMap))
                                 {
-                                    IEnumerable<Plant> list = current.GetThingList(Find.VisibleMap).Where(t => t is Plant).Cast<Plant>();
+                                    IEnumerable<Plant> list = current.GetThingList(map: Find.CurrentMap).Where(predicate: t => t is Plant).Cast<Plant>();
                                     foreach (Plant current2 in list)
                                     {
                                         current2.Growth = 1f;
-                                        current2.Map.mapDrawer.MapMeshDirty(current2.Position, MapMeshFlag.Things);
+                                        current2.Map.mapDrawer.MapMeshDirty(loc: current2.Position, dirtyFlags: MapMeshFlag.Things);
                                     }
-                                    MoteMaker.ThrowMetaPuff(current.ToVector3(), Find.VisibleMap);
+                                    MoteMaker.ThrowMetaPuff(loc: current.ToVector3(), map: Find.CurrentMap);
                                 }
-                            }
+
                             BehaviourInterpreter.staticVariables.rootsyCount--;
                             if (BehaviourInterpreter.staticVariables.rootsyCount > 0)
-                                BehaviourInterpreter._instance.WaitAndExecute(() => grower.action());  //LongEventHandler.QueueLongEvent(() => extinguish.action(), "", false, null);
-                        }, null, null, grower.icon);
+                                BehaviourInterpreter.instance.WaitAndExecute(action: () => grower.action());  //LongEventHandler.QueueLongEvent(() => extinguish.action(), "", false, null);
+                        }, caster: null, actionWhenFinished: null, mouseAttachment: grower.icon);
                     };
 
                     yield return grower;
@@ -448,12 +415,12 @@ namespace Ankh
             
             public override string GetInspectString()
             {
-                StringBuilder sb = new StringBuilder(base.GetInspectString());
-                sb.AppendLine("Rootsy favors: " + BehaviourInterpreter.staticVariables.rootsyCount);
+                StringBuilder sb = new StringBuilder(value: base.GetInspectString());
+                sb.AppendLine(value: "Rootsy favors: " + BehaviourInterpreter.staticVariables.rootsyCount);
                 return sb.ToString().Trim();
             }
         }
-        public class Building_HUMOUR : Building
+        public class Building_Humour : Building
         {
             public override IEnumerable<Gizmo> GetGizmos()
             {
@@ -466,44 +433,41 @@ namespace Ankh
                     {
                         defaultLabel = "Humour's heal",
                         defaultDesc = "Channel Humour's favor.",
-                        icon = ContentFinder<Texture2D>.Get("UI/Icons/ColonistBar/MedicalRest", true),
+                        icon = ContentFinder<Texture2D>.Get(itemPath: "UI/Icons/ColonistBar/MedicalRest"),
                         activateSound = SoundDefOf.Click
                     };
                     healer.action = delegate
                     {
-                        Find.Targeter.BeginTargeting(new TargetingParameters()
+                        Find.Targeter.BeginTargeting(targetParams: new TargetingParameters()
                         {
                             validator = c =>
                             {
-                                if (c.Cell.Fogged(Find.VisibleMap) || !c.IsValid || !c.Cell.InBounds(Find.VisibleMap))
-                                {
-                                    return false;
-                                }
-                                Pawn pawn = c.Cell.GetFirstPawn(c.Map);
-                                return (pawn?.IsColonistPlayerControlled ?? false) && pawn.health.hediffSet.GetHediffs<Hediff_Injury>().Count(hi => !hi.IsOld()) > 0 && Mathf.Sqrt(c.Cell.DistanceToSquared(this.Position)) < 26f;
+                                if (c.Cell.Fogged(map: Find.CurrentMap) || !c.IsValid || !c.Cell.InBounds(map: Find.CurrentMap)) return false;
+                                Pawn pawn = c.Cell.GetFirstPawn(map: c.Map);
+                                return (pawn?.IsColonistPlayerControlled ?? false) && pawn.health.hediffSet.GetHediffs<Hediff_Injury>().Count(predicate: hi => !hi.IsPermanent()) > 0 && Mathf.Sqrt(f: c.Cell.DistanceToSquared(b: this.Position)) < 26f;
                             },
                             canTargetLocations = false,
                             canTargetPawns = true
-                        }, lti =>
+                        }, action: lti =>
                         {
-                            Pawn p = lti.Thing as Pawn;
+                            Pawn p = (Pawn) lti.Thing;
 
                             int i = 20;
 
-                            List<Hediff_Injury> hediffs = p.health.hediffSet.GetHediffs<Hediff_Injury>().Where(hi => !hi.IsOld()).ToList();
+                            List<Hediff_Injury> hediffs = p.health.hediffSet.GetHediffs<Hediff_Injury>().Where(predicate: hi => !hi.IsPermanent()).ToList();
                             while (i > 0 && hediffs.Count > 0)
                             {
                                 Hediff_Injury hediff = hediffs.First();
-                                float val = Mathf.Min(i, hediff.Severity);
-                                i -= Mathf.RoundToInt(val);
-                                hediff.Heal(val);
-                                hediffs.Remove(hediff);
+                                float val = Mathf.Min(a: i, b: hediff.Severity);
+                                i -= Mathf.RoundToInt(f: val);
+                                hediff.Heal(amount: val);
+                                hediffs.Remove(item: hediff);
                             }
 
                             BehaviourInterpreter.staticVariables.humourCount--;
                             if (BehaviourInterpreter.staticVariables.humourCount > 0)
-                                BehaviourInterpreter._instance.WaitAndExecute(() => healer.action());  //LongEventHandler.QueueLongEvent(() => extinguish.action(), "", false, null);
-                        }, null, null, healer.icon);
+                                BehaviourInterpreter.instance.WaitAndExecute(action: () => healer.action());  //LongEventHandler.QueueLongEvent(() => extinguish.action(), "", false, null);
+                        }, caster: null, actionWhenFinished: null, mouseAttachment: healer.icon);
                     };
 
                     yield return healer;
@@ -513,37 +477,34 @@ namespace Ankh
                     {
                         defaultLabel = "Humour's immunity boost",
                         defaultDesc = "Channel Humour's favor.",
-                        icon = ContentFinder<Texture2D>.Get("UI/Icons/ColonistBar/MedicalRest", true),
+                        icon = ContentFinder<Texture2D>.Get(itemPath: "UI/Icons/ColonistBar/MedicalRest"),
                         activateSound = SoundDefOf.Click
                     };
                     immunity.action = delegate
                     {
-                        Find.Targeter.BeginTargeting(new TargetingParameters()
+                        Find.Targeter.BeginTargeting(targetParams: new TargetingParameters()
                         {
                             validator = c =>
                             {
-                                if (c.Cell.Fogged(Find.VisibleMap) || !c.IsValid || !c.Cell.InBounds(Find.VisibleMap))
-                                {
-                                    return false;
-                                }
-                                Pawn pawn = c.Cell.GetFirstPawn(c.Map);
-                                return (pawn?.IsColonistPlayerControlled ?? false) && pawn.health.hediffSet.hediffs.Any(hd => hd.TryGetComp<HediffComp_Immunizable>() != null) && Mathf.Sqrt(c.Cell.DistanceToSquared(this.Position)) < 26f;
+                                if (c.Cell.Fogged(map: Find.CurrentMap) || !c.IsValid || !c.Cell.InBounds(map: Find.CurrentMap)) return false;
+                                Pawn pawn = c.Cell.GetFirstPawn(map: c.Map);
+                                return (pawn?.IsColonistPlayerControlled ?? false) && pawn.health.hediffSet.hediffs.Any(predicate: hd => hd.TryGetComp<HediffComp_Immunizable>() != null) && Mathf.Sqrt(f: c.Cell.DistanceToSquared(b: this.Position)) < 26f;
                             },
                             canTargetLocations = false,
                             canTargetPawns = true
-                        }, lti =>
+                        }, action: lti =>
                         {
-                            Pawn p = lti.Thing as Pawn;
+                            Pawn p = (Pawn) lti.Thing;
 
-                            Hediff hediff = p.health.hediffSet.hediffs.Where(hd => hd.TryGetComp<HediffComp_Immunizable>() != null).First();
+                            Hediff hediff = p.health.hediffSet.hediffs.First(hd => hd.TryGetComp<HediffComp_Immunizable>() != null);
 
-                            p.health.immunity.GetImmunityRecord(hediff.def).immunity += 0.10f;
+                            p.health.immunity.GetImmunityRecord(def: hediff.def).immunity += 0.10f;
 
 
                             BehaviourInterpreter.staticVariables.humourCount--;
                             if (BehaviourInterpreter.staticVariables.humourCount > 0)
-                                BehaviourInterpreter._instance.WaitAndExecute(() => immunity.action());
-                        }, null, null, immunity.icon);
+                                BehaviourInterpreter.instance.WaitAndExecute(action: () => immunity.action());
+                        }, caster: null, actionWhenFinished: null, mouseAttachment: immunity.icon);
                     };
 
                     yield return immunity;
@@ -554,47 +515,28 @@ namespace Ankh
                         {
                             defaultLabel = "Humour's revive",
                             defaultDesc = "Channel Humour's favor.",
-                            icon = ContentFinder<Texture2D>.Get("UI/Icons/ColonistBar/MedicalRest", true),
+                            icon = ContentFinder<Texture2D>.Get(itemPath: "UI/Icons/ColonistBar/MedicalRest"),
                             activateSound = SoundDefOf.Click
                         };
                         revive.action = delegate
                         {
-                            Find.Targeter.BeginTargeting(new TargetingParameters()
+                            Find.Targeter.BeginTargeting(targetParams: new TargetingParameters()
                             {
                                 validator = c =>
                                 {
-                                    if (c.Cell.Fogged(Find.VisibleMap) || !c.IsValid || !c.Cell.InBounds(Find.VisibleMap))
-                                    {
-                                        return false;
-                                    }
-                                    Corpse corpse = c.Cell.GetThingList(c.Map).Find(t => t is Corpse) as Corpse;
-                                    return corpse != null && corpse.GetRotStage() == RotStage.Fresh && corpse.InnerPawn.IsColonist;
+                                    if (c.Cell.Fogged(map: Find.CurrentMap) || !c.IsValid || !c.Cell.InBounds(map: Find.CurrentMap)) return false;
+                                    return c.Cell.GetThingList(map: c.Map).Find(match: t => t is Corpse) is Corpse corpse && corpse.GetRotStage() == RotStage.Fresh && corpse.InnerPawn.IsColonist;
                                 },
                                 canTargetLocations = true
-                            }, lti =>
+                            }, action: lti =>
                             {
-                                Corpse corpse = lti.Cell.GetThingList(Find.VisibleMap).Find(t => t is Corpse) as Corpse;
-                                Pawn pawn = corpse.InnerPawn;
-                                corpse.Destroy();
-                                typeof(Thing).GetField("mapIndexOrState", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(pawn, (sbyte)-1);
-
-                                pawn.health.Reset();
-                                pawn.workSettings = new Pawn_WorkSettings(pawn);
-                                pawn.mindState = new Pawn_MindState(pawn);
-                                pawn.carryTracker = new Pawn_CarryTracker(pawn);
-                                pawn.needs = new Pawn_NeedsTracker(pawn);
-                                pawn.trader = new Pawn_TraderTracker(pawn);
-
-                                typeof(Pawn_HealthTracker).GetField("healthState", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(pawn.health, PawnHealthState.Mobile);
-                                if (pawn.Faction != Faction.OfPlayer)
-                                    pawn.SetFaction(Faction.OfPlayer);
-                                pawn.workSettings.EnableAndInitialize();
-                                GenSpawn.Spawn(pawn, lti.Cell, Find.VisibleMap);
+                                Corpse corpse = (Corpse) lti.Cell.GetThingList(map: Find.CurrentMap).Find(match: t => t is Corpse);
+                                ResurrectionUtility.Resurrect(pawn: corpse.InnerPawn);
 
                                 BehaviourInterpreter.staticVariables.humourCount -= 10;
                                 if (BehaviourInterpreter.staticVariables.humourCount > 10)
-                                    BehaviourInterpreter._instance.WaitAndExecute(() => revive.action());
-                            }, null, null, revive.icon);
+                                    BehaviourInterpreter.instance.WaitAndExecute(action: () => revive.action());
+                            }, caster: null, actionWhenFinished: null, mouseAttachment: revive.icon);
                         };
 
                         yield return revive;
@@ -604,18 +546,18 @@ namespace Ankh
 
             public override void DrawExtraSelectionOverlays()
             {
-                GenDraw.DrawRadiusRing(this.DrawPos.ToIntVec3(), 25.9f);
+                GenDraw.DrawRadiusRing(center: this.DrawPos.ToIntVec3(), radius: 25.9f);
                 base.DrawExtraSelectionOverlays();
             }
 
             public override string GetInspectString()
             {
-                StringBuilder sb = new StringBuilder(base.GetInspectString());
-                sb.AppendLine("Humour favors: " + BehaviourInterpreter.staticVariables.humourCount);
+                StringBuilder sb = new StringBuilder(value: base.GetInspectString());
+                sb.AppendLine(value: "Humour favors: " + BehaviourInterpreter.staticVariables.humourCount);
                 return sb.ToString().Trim();
             }
         }
-        public class Building_DORF : Building
+        public class Building_Dorf : Building
         {
             public override IEnumerable<Gizmo> GetGizmos()
             {
@@ -628,54 +570,51 @@ namespace Ankh
                     {
                         defaultLabel = "Dorf's  Favor",
                         defaultDesc = "Channel Rootsy's favor.",
-                        icon = ContentFinder<Texture2D>.Get("UI_dorf", true),
+                        icon = ContentFinder<Texture2D>.Get(itemPath: "UI_dorf"),
                         activateSound = SoundDefOf.Click
                     };
 
                     miner.action = delegate
                     {
-                        Find.Targeter.BeginTargeting(new TargetingParameters()
+                        Find.Targeter.BeginTargeting(targetParams: new TargetingParameters()
                         {
                             validator = c =>
                             {
-                                if (!c.IsValid || !c.Cell.InBounds(Find.VisibleMap))
-                                {
-                                    return false;
-                                }
-                                List<IntVec3> cells = GenAdj.CellsOccupiedBy(c.Cell, Rot4.North, new IntVec2(3, 3)).ToList();
+                                if (!c.IsValid || !c.Cell.InBounds(map: Find.CurrentMap)) return false;
+                                List<IntVec3> cells = GenAdj.CellsOccupiedBy(center: c.Cell, rotation: Rot4.North, size: new IntVec2(newX: 3, newZ: 3)).ToList();
 
                                 bool returns = false;
                                 foreach (IntVec3 current in cells)
-                                {
-                                    if (current.InBounds(Find.VisibleMap))
-                                        if (current.GetThingList(Find.VisibleMap).Any(t => t.def.mineable))
+                                    if (current.InBounds(map: Find.CurrentMap))
+                                        if (current.GetThingList(map: Find.CurrentMap).Any(predicate: t => t.def.mineable))
                                             returns = true;
-                                }
                                 if (returns)
-                                    GenDraw.DrawFieldEdges(cells);
+                                    GenDraw.DrawFieldEdges(cells: cells);
                                 return returns;
                             },
                             canTargetLocations = true
-                        }, c =>
+                        }, action: c =>
                         {
-                            Pawn pawn = this.Map.mapPawns.FreeColonists.MaxBy(p => p.GetStatValue(StatDefOf.MiningYield));
-                            foreach (IntVec3 current in GenAdj.CellsOccupiedBy(c.Cell, Rot4.North, new IntVec2(3, 3)))
-                            {
-                                if (current.IsValid && current.InBounds(Find.VisibleMap))
+                            Pawn pawn = this.Map.mapPawns.FreeColonists.MaxBy(selector: p => p.GetStatValue(stat: StatDefOf.MiningYield));
+                            foreach (IntVec3 current in GenAdj.CellsOccupiedBy(center: c.Cell, rotation: Rot4.North, size: new IntVec2(newX: 3, newZ: 3)))
+                                if (current.IsValid && current.InBounds(map: Find.CurrentMap))
                                 {
-                                    IEnumerable<Mineable> list = current.GetThingList(Find.VisibleMap).Where(t => t is Mineable).Cast<Mineable>();
-                                    while(list.Count() > 0)
+                                    IEnumerable<Mineable> list = current.GetThingList(map: Find.CurrentMap).Where(predicate: t => t is Mineable).Cast<Mineable>().ToList();
+                                    int i = 20;
+                                    while (list.Any() && i > 0)
                                     {
-                                        Mineable current2 = list.First();
-                                        current2.TakeDamage(new DamageInfo(DamageDefOf.Mining, current2.HitPoints, -1, pawn));
+                                        i--;
+                                        Mineable mineable = list.First();
+                                        mineable.TakeDamage(dinfo: new DamageInfo(def: DamageDefOf.Mining, amount: mineable.HitPoints, armorPenetration: -1, angle: -1, instigator: pawn));
                                     }
-                                    MoteMaker.ThrowMetaPuff(current.ToVector3(), Find.VisibleMap);
+
+                                    MoteMaker.ThrowMetaPuff(loc: current.ToVector3(), map: Find.CurrentMap);
                                 }
-                            }
+
                             BehaviourInterpreter.staticVariables.dorfCount--;
                             if (BehaviourInterpreter.staticVariables.dorfCount > 0)
-                                BehaviourInterpreter._instance.WaitAndExecute(() => miner.action());
-                        }, null, null, miner.icon);
+                                BehaviourInterpreter.instance.WaitAndExecute(action: () => miner.action());
+                        }, caster: null, actionWhenFinished: null, mouseAttachment: miner.icon);
                     };
 
                     yield return miner;
@@ -684,8 +623,8 @@ namespace Ankh
 
             public override string GetInspectString()
             {
-                StringBuilder sb = new StringBuilder(base.GetInspectString());
-                sb.AppendLine("Dorf favors: " + BehaviourInterpreter.staticVariables.dorfCount);
+                StringBuilder sb = new StringBuilder(value: base.GetInspectString());
+                sb.AppendLine(value: "Dorf favors: " + BehaviourInterpreter.staticVariables.dorfCount);
                 return sb.ToString().Trim();
             }
         }
@@ -694,14 +633,14 @@ namespace Ankh
         {
             public override IEnumerable<FloatMenuOption> GetFloatMenuOptions(Pawn selPawn)
             {
-                if(BehaviourInterpreter._instance.instanceVariableHolder.altarState <= 1)
-                    yield return new FloatMenuOption("Sacrifice " + selPawn.LabelCap, () => selPawn.jobs.TryTakeOrderedJob(new Job(AnkhDefOf.sacrificeToAltar, this)));
+                if(BehaviourInterpreter.instance.instanceVariableHolder.altarState <= 1)
+                    yield return new FloatMenuOption(label: "Sacrifice " + selPawn.LabelCap, action: () => selPawn.jobs.TryTakeOrderedJob(job: new Job(def: AnkhDefOf.sacrificeToAltar, targetA: this)));
             }
 
             public override IEnumerable<Gizmo> GetGizmos()
             {
                 Find.ReverseDesignatorDatabase.AllDesignators.Clear();
-                BehaviourInterpreter._instance.WaitAndExecute(() => Find.ReverseDesignatorDatabase.Reinit());
+                BehaviourInterpreter.instance.WaitAndExecute(action: () => Find.ReverseDesignatorDatabase.Reinit());
                 return new List<Gizmo>();
             }
         }

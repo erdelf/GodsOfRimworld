@@ -4,7 +4,7 @@ using Verse;
 
 namespace Ankh
 {
-    static class AnkhDefOf
+    internal static class AnkhDefOf
     {
         public static IncidentDef miracleHeal;
         public static GameConditionDef wrathCondition;

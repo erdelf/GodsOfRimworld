@@ -7,12 +7,13 @@ using Verse.AI;
 
 namespace Ankh
 {
+    // ReSharper disable once InconsistentNaming
     public class ITab_Wraths : ITab
     {
-        private static readonly Vector2 SmallSize = new Vector2(420f, 100f);
-        private static readonly Vector2 FullSize = new Vector2(420f, 480f);
+        private static readonly Vector2 smallSize = new Vector2(x: 420f, y: 100f);
+        private static readonly Vector2 fullSize = new Vector2(x: 420f, y: 480f);
 
-        private static int State => BehaviourInterpreter._instance.instanceVariableHolder.altarState;
+        private static int State => BehaviourInterpreter.instance.instanceVariableHolder.altarState;
 
         public ITab_Wraths()
         {
@@ -23,43 +24,41 @@ namespace Ankh
         public override void OnOpen()
         {
             base.OnOpen();
-            this.size = State <= 1 ? SmallSize : FullSize;
-            List<KeyValuePair<int, List<string[]>>> scheduleList;
-            scheduleList = BehaviourInterpreter._instance.instanceVariableHolder.scheduler.Where(kvp => kvp.Key < Find.TickManager.TicksGame + GenDate.TicksPerDay).ToList().ListFullCopyOrNull();
-            scheduleList.ForEach(kvp => kvp.Value.RemoveAll(s => !s[0].Equals("callTheGods") || !s[2].Equals("False")));
-            scheduleList.RemoveAll(kvp => kvp.Value.NullOrEmpty());
-            float longitude = Find.WorldGrid.LongLatOf(this.SelThing.Map.Tile).x;
+            this.size = State <= 1 ? smallSize : fullSize;
+            List<KeyValuePair<int, List<string[]>>> scheduleList = BehaviourInterpreter.instance.instanceVariableHolder.scheduler.Where(predicate: kvp => kvp.Key < Find.TickManager.TicksGame + GenDate.TicksPerDay).ToList().ListFullCopyOrNull();
+            scheduleList.ForEach(action: kvp => kvp.Value.RemoveAll(match: s => !s[0].Equals(value: "callTheGods") || !s[2].Equals(value: "False")));
+            scheduleList.RemoveAll(match: kvp => kvp.Value.NullOrEmpty());
+            float longitude = Find.WorldGrid.LongLatOf(tileID: this.SelThing.Map.Tile).x;
 
-            this.relevantSchedules = scheduleList.Select(kvp =>
+            this.relevantSchedules = scheduleList.Select(selector: kvp =>
             {
-                float hour = GenDate.HourFloat(GenDate.TickGameToAbs(kvp.Key), longitude);
-                int hourInt = Mathf.FloorToInt(hour);
-                return new KeyValuePair<string, List<string[]>>((hourInt%24).ToString("D2") + ":" + Mathf.RoundToInt((hour - hourInt) * 60f).ToString("D2"), kvp.Value);
+                float hour = GenDate.HourFloat(absTicks: GenDate.TickGameToAbs(gameTick: kvp.Key), longitude: longitude);
+                int hourInt = Mathf.FloorToInt(f: hour);
+                return new KeyValuePair<string, List<string[]>>(key: (hourInt%24).ToString(format: "D2") + ":" + Mathf.RoundToInt(f: (hour - hourInt) * 60f).ToString(format: "D2"), value: kvp.Value);
             }).ToList();
         }
 
-        Vector2 scrollPosition = Vector2.zero;
-
-        List<KeyValuePair<string, List<string[]>>> relevantSchedules;
+        private Vector2 scrollPosition = Vector2.zero;
+        private List<KeyValuePair<string, List<string[]>>> relevantSchedules;
 
         protected override void FillTab()
         {
-            Rect rect = new Rect(0f, 0f, this.size.x, this.size.y).ContractedBy(10f);
+            Rect rect = new Rect(x: 0f, y: 0f, width: this.size.x, height: this.size.y).ContractedBy(margin: 10f);
             if (State <= 1)
             {
-                Widgets.Label(rect, State == 0 ? "The gods offer you a way to delay their wrath, but they require a sacrifice.\nSend one of your colonists to serve the Gods." :
+                Widgets.Label(rect: rect, label: State == 0 ? "The gods offer you a way to delay their wrath, but they require a sacrifice.\nSend one of your colonists to serve the Gods." :
                     "The gods enjoy their new servant. New wraths will take a day before arriving.\nThey have a new offer for you. Want to see the wraths before they arrive, mortal?");
             } else
             {
-                GUI.BeginGroup(rect);
-                Widgets.Label(rect.TopPart(0.10f), "The gods are pleased for now. Enjoy their gifts.\nWraths: " + this.relevantSchedules.SelectMany(kvp => kvp.Value).Count());
-                Widgets.BeginScrollView(rect.BottomPart(0.90f).ContractedBy(20f), ref this.scrollPosition, new Rect(rect.x, rect.y, rect.width/3*2, this.relevantSchedules.SelectMany(kvp => kvp.Value).Count() * 55f));
+                GUI.BeginGroup(position: rect);
+                Widgets.Label(rect: rect.TopPart(pct: 0.10f), label: "The gods are pleased for now. Enjoy their gifts.\nWraths: " + this.relevantSchedules.SelectMany(selector: kvp => kvp.Value).Count());
+                Widgets.BeginScrollView(outRect: rect.BottomPart(pct: 0.90f).ContractedBy(margin: 20f), scrollPosition: ref this.scrollPosition, viewRect: new Rect(x: rect.x, y: rect.y, width: rect.width/3*2, height: this.relevantSchedules.SelectMany(selector: kvp => kvp.Value).Count() * 55f));
                 int num = 45;
-                this.relevantSchedules.ForEach(kvp =>
+                this.relevantSchedules.ForEach(action: kvp =>
                 {
-                    kvp.Value.ForEach(s =>
+                    kvp.Value.ForEach(action: s =>
                     {
-                        Widgets.Label(new Rect(rect.x, num + 5, rect.width - 16f, 40f), s[1] + "\t" + kvp.Key.ToString());
+                        Widgets.Label(rect: new Rect(x: rect.x, y: num + 5, width: rect.width - 16f, height: 40f), label: s[1] + "\t" + kvp.Key.ToString());
                         num += 45;
                     });
                 });
@@ -77,16 +76,18 @@ namespace Ankh
 
     public class JobDriver_Sacrifice : JobDriver
     {
+        public override bool TryMakePreToilReservations(bool errorOnFailed) => this.pawn.Reserve(target: this.job.targetA, job: this.job);
+
         protected override IEnumerable<Toil> MakeNewToils()
         {
-            yield return Toils_Reserve.Reserve(TargetIndex.A, 1, 1);
-            yield return Toils_Goto.GotoThing(TargetIndex.A, PathEndMode.InteractionCell);
-            Toil toil = Toils_General.Wait(500);
-            toil.WithProgressBarToilDelay(TargetIndex.B);
-            toil.AddFinishAction(() => MoteMaker.ThrowLightningGlow(this.pawn.Position.ToVector3(), this.Map, 50f));
-            toil.AddFinishAction(() => BehaviourInterpreter._instance.WaitAndExecute(() => this.pawn.DeSpawn()));
-            toil.AddFinishAction(() => this.Map.weatherManager.eventHandler.AddEvent(new WeatherEvent_LightningStrike(this.Map, this.TargetLocA)));
-            toil.AddFinishAction(() => BehaviourInterpreter._instance.instanceVariableHolder.altarState++);
+            yield return Toils_Reserve.Reserve(ind: TargetIndex.A, maxPawns: 1, stackCount: 1);
+            yield return Toils_Goto.GotoThing(ind: TargetIndex.A, peMode: PathEndMode.InteractionCell);
+            Toil toil = Toils_General.Wait(ticks: 500);
+            toil.WithProgressBarToilDelay(ind: TargetIndex.B);
+            toil.AddFinishAction(newAct: () => MoteMaker.ThrowLightningGlow(loc: this.pawn.Position.ToVector3(), map: this.Map, size: 50f));
+            toil.AddFinishAction(newAct: () => BehaviourInterpreter.instance.WaitAndExecute(action: () => this.pawn.DeSpawn()));
+            toil.AddFinishAction(newAct: () => this.Map.weatherManager.eventHandler.AddEvent(newEvent: new WeatherEvent_LightningStrike(map: this.Map, forcedStrikeLoc: this.TargetLocA)));
+            toil.AddFinishAction(newAct: () => BehaviourInterpreter.instance.instanceVariableHolder.altarState++);
             yield return toil;
         }
     }
